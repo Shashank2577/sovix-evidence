@@ -1,0 +1,3643 @@
+{
+  "schema_version": "1.0",
+  "status": "planned",
+  "tasks": [
+    {
+      "id": "T001",
+      "description": "Create workspace manifests with pinned runtime targets and dependency lockfiles",
+      "path": "package.json",
+      "requirements": [
+        "NFR-011"
+      ],
+      "story": null,
+      "depends_on": [],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR011"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T002",
+      "description": "Create Python package, module boundaries and migration entrypoint",
+      "path": "services/platform/pyproject.toml",
+      "requirements": [
+        "NFR-011"
+      ],
+      "story": null,
+      "depends_on": [
+        "T001"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR011"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T003",
+      "description": "Create TypeScript scanner and console workspace configurations",
+      "path": "pnpm-workspace.yaml",
+      "requirements": [
+        "NFR-006"
+      ],
+      "story": null,
+      "depends_on": [
+        "T001"
+      ],
+      "parallel": true,
+      "acceptance": [
+        "AC-NFR006"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T004",
+      "description": "Implement validated local/hosted configuration with loopback secret and no automatic egress",
+      "path": "services/platform/src/sovix/config.py",
+      "requirements": [
+        "FR-005",
+        "NFR-010"
+      ],
+      "story": null,
+      "depends_on": [
+        "T002"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1",
+        "AC-NFR010"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T005",
+      "description": "Implement shared value objects, UTC half-open windows and decimal serialization",
+      "path": "services/platform/src/sovix/domain/values.py",
+      "requirements": [
+        "NFR-009",
+        "FR-007"
+      ],
+      "story": null,
+      "depends_on": [
+        "T002"
+      ],
+      "parallel": true,
+      "acceptance": [
+        "AC-NFR009",
+        "AC-US2"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T006",
+      "description": "Implement SQLite and PostgreSQL unit-of-work adapters and scoped foreign keys",
+      "path": "services/platform/src/sovix/persistence/uow.py",
+      "requirements": [
+        "FR-013",
+        "NFR-007"
+      ],
+      "story": null,
+      "depends_on": [
+        "T002",
+        "T005"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3",
+        "AC-NFR007"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T007",
+      "description": "Implement authenticated request context, typed Problem responses, idempotency receipts and ETags",
+      "path": "services/platform/src/sovix/api/middleware.py",
+      "requirements": [
+        "FR-004",
+        "FR-013",
+        "NFR-011"
+      ],
+      "story": null,
+      "depends_on": [
+        "T004",
+        "T006"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1",
+        "AC-US3",
+        "AC-NFR011"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T008",
+      "description": "Implement transactional outbox, leased jobs, heartbeat and fencing primitives",
+      "path": "services/platform/src/sovix/workers/jobs.py",
+      "requirements": [
+        "FR-004",
+        "FR-039"
+      ],
+      "story": null,
+      "depends_on": [
+        "T006"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1",
+        "AC-US7"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T009",
+      "description": "Generate API clients and shared schemas; add contract drift checks against committed OpenAPI",
+      "path": "packages/contracts/package.json",
+      "requirements": [
+        "NFR-011"
+      ],
+      "story": null,
+      "depends_on": [
+        "T001"
+      ],
+      "parallel": true,
+      "acceptance": [
+        "AC-NFR011"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T010",
+      "description": "Create synthetic fixtures, deterministic clock, isolated database harness and forbidden-network harness",
+      "path": "tests/conftest.py",
+      "requirements": [
+        "SC-002",
+        "NFR-008"
+      ],
+      "story": null,
+      "depends_on": [
+        "T005",
+        "T006"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC002",
+        "AC-NFR008"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T011",
+      "description": "Implement metadata allowlist and structured content-free error logging",
+      "path": "services/platform/src/sovix/domain/privacy.py",
+      "requirements": [
+        "FR-016",
+        "NFR-010"
+      ],
+      "story": null,
+      "depends_on": [
+        "T005"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3",
+        "AC-NFR010"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T012",
+      "description": "Create accessible shared tokens, form primitives and data table keyboard behavior",
+      "path": "packages/ui/src/index.ts",
+      "requirements": [
+        "NFR-005",
+        "NFR-006"
+      ],
+      "story": null,
+      "depends_on": [
+        "T003"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR005",
+        "AC-NFR006"
+      ],
+      "phase": "M0"
+    },
+    {
+      "id": "T013",
+      "description": "Write failing contract and adversarial acceptance fixtures for US1; cover all six requirements",
+      "path": "tests/integration/test_us1.py",
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T014",
+      "description": "Implement read-only local Git scan with commit/line/signature-floor aggregates and JSON output",
+      "path": "packages/scanner/src/scan.ts",
+      "requirements": [
+        "FR-001"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T013"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T015",
+      "description": "Implement explicit Sovix and Receipts version adapters, preserving original namespaced metrics and coverage",
+      "path": "services/platform/src/sovix/adapters/legacy.py",
+      "requirements": [
+        "FR-002"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T014"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T016",
+      "description": "Implement source capability registry and pagination/window completeness watermarks",
+      "path": "services/platform/src/sovix/domain/coverage.py",
+      "requirements": [
+        "FR-003"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T015"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T017",
+      "description": "Implement source natural-key dedupe, conflicting-payload quarantine and resumable collection checkpoints",
+      "path": "services/platform/src/sovix/adapters/receipts/collection.py",
+      "requirements": [
+        "FR-004"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T016"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T018",
+      "description": "Enforce offline mode, read-only Git operations and opt-in connector egress at adapter boundary",
+      "path": "packages/scanner/src/privacy.ts",
+      "requirements": [
+        "FR-005"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T017"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T019",
+      "description": "Implement import validation diagnostics, bad-record counts and retryable versus permanent failure reasons",
+      "path": "services/platform/src/sovix/adapters/import_validation.py",
+      "requirements": [
+        "FR-006"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T018"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T020",
+      "description": "Implement every US1 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/imports.py",
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T019"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T021",
+      "description": "Implement historical baseline UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/import/page.tsx",
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T020"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T022",
+      "description": "Run US1 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us1.spec.ts",
+      "requirements": [
+        "FR-001",
+        "FR-002",
+        "FR-003",
+        "FR-004",
+        "FR-005",
+        "FR-006"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T021"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1"
+      ],
+      "phase": "US1"
+    },
+    {
+      "id": "T023",
+      "description": "Write failing contract and adversarial acceptance fixtures for US2; cover all six requirements",
+      "path": "tests/integration/test_us2.py",
+      "requirements": [
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T022"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T024",
+      "description": "Implement canonical MetricResult contract with formula, scope, coverage, lineage, versions and nullability",
+      "path": "services/platform/src/sovix/analytics/result.py",
+      "requirements": [
+        "FR-007"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T023"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T025",
+      "description": "Implement evidence lookup and independent arithmetic/hash verification without model calls",
+      "path": "services/platform/src/sovix/analytics/verify.py",
+      "requirements": [
+        "FR-008"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T024"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T026",
+      "description": "Implement versioned 27-metric registry and recompute cohort aggregates from eligible raw observations",
+      "path": "services/platform/src/sovix/analytics/calculators.py",
+      "requirements": [
+        "FR-009"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T025"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T027",
+      "description": "Implement availability and measured/proxy/inferred labels, missing denominators and mature-window exclusions",
+      "path": "services/platform/src/sovix/analytics/availability.py",
+      "requirements": [
+        "FR-010"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T026"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T028",
+      "description": "Implement leadership, investigation and coverage view models with evidence drilldown",
+      "path": "services/platform/src/sovix/reporting/views.py",
+      "requirements": [
+        "FR-011"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T027"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T029",
+      "description": "Implement deterministic escaped HTML/JSON/CSV/Markdown exporters and content-hash manifests",
+      "path": "services/platform/src/sovix/reporting/export.py",
+      "requirements": [
+        "FR-012"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T028"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T030",
+      "description": "Implement every US2 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/snapshots.py",
+      "requirements": [
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T029"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T031",
+      "description": "Implement evidence and reports UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/reports/[snapshotId]/page.tsx",
+      "requirements": [
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T030"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T032",
+      "description": "Run US2 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us2.spec.ts",
+      "requirements": [
+        "FR-007",
+        "FR-008",
+        "FR-009",
+        "FR-010",
+        "FR-011",
+        "FR-012"
+      ],
+      "story": "US2",
+      "depends_on": [
+        "T031"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US2"
+      ],
+      "phase": "US2"
+    },
+    {
+      "id": "T033",
+      "description": "Write failing contract and adversarial acceptance fixtures for US3; cover all six requirements",
+      "path": "tests/integration/test_us3.py",
+      "requirements": [
+        "FR-013",
+        "FR-014",
+        "FR-015",
+        "FR-016",
+        "FR-017",
+        "FR-018"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T034",
+      "description": "Implement OIDC principal mapping, workspace membership and owner transfer invariant",
+      "path": "services/platform/src/sovix/domain/identity.py",
+      "requirements": [
+        "FR-013"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T033"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T035",
+      "description": "Implement per-project role policy and forced RLS for API, workers and export queries",
+      "path": "services/platform/src/sovix/persistence/authorization.py",
+      "requirements": [
+        "FR-014"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T034"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T036",
+      "description": "Implement GitHub App installation validation, raw HMAC webhook receipt, secret references and revocation",
+      "path": "services/platform/src/sovix/adapters/github/installation.py",
+      "requirements": [
+        "FR-015"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T035"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T037",
+      "description": "Enforce aggregate-first ingestion and strip prompts, emails, arguments and exception text before persistence",
+      "path": "services/platform/src/sovix/adapters/redaction.py",
+      "requirements": [
+        "FR-016"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T036"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T038",
+      "description": "Implement hosted k>=5 cohort suppression with complementary suppression and filter restrictions",
+      "path": "services/platform/src/sovix/analytics/suppression.py",
+      "requirements": [
+        "FR-017"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T037"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T039",
+      "description": "Implement content-free append-only audit events for identity, access, source and action changes",
+      "path": "services/platform/src/sovix/domain/audit.py",
+      "requirements": [
+        "FR-018"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T038"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T040",
+      "description": "Implement every US3 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/workspaces.py",
+      "requirements": [
+        "FR-013",
+        "FR-014",
+        "FR-015",
+        "FR-016",
+        "FR-017",
+        "FR-018"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T039"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T041",
+      "description": "Implement private hosted workspaces UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/settings/workspace/page.tsx",
+      "requirements": [
+        "FR-013",
+        "FR-014",
+        "FR-015",
+        "FR-016",
+        "FR-017",
+        "FR-018"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T040"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T042",
+      "description": "Run US3 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us3.spec.ts",
+      "requirements": [
+        "FR-013",
+        "FR-014",
+        "FR-015",
+        "FR-016",
+        "FR-017",
+        "FR-018"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T041"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3"
+      ],
+      "phase": "US3"
+    },
+    {
+      "id": "T043",
+      "description": "Write failing contract and adversarial acceptance fixtures for US4; cover all six requirements",
+      "path": "tests/integration/test_us4.py",
+      "requirements": [
+        "FR-019",
+        "FR-020",
+        "FR-021",
+        "FR-022",
+        "FR-023",
+        "FR-024"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T042"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T044",
+      "description": "Implement scoped collector credentials and runtime capability certification registry",
+      "path": "services/platform/src/sovix/domain/collectors.py",
+      "requirements": [
+        "FR-019"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T043"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T045",
+      "description": "Implement Dash0/Codex OTLP normalization with strict allowlist and native response encoding",
+      "path": "services/platform/src/sovix/adapters/otlp/receiver.py",
+      "requirements": [
+        "FR-020"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T044"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T046",
+      "description": "Implement source/session/span identities with credential-bound workspace/project context",
+      "path": "services/platform/src/sovix/domain/sessions.py",
+      "requirements": [
+        "FR-021"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T045"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T047",
+      "description": "Implement usage owner normalization, session duration and tool-status projections",
+      "path": "services/platform/src/sovix/analytics/telemetry.py",
+      "requirements": [
+        "FR-022"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T046"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T048",
+      "description": "Implement duplicate and late-span handling with parent/subagent accounting and conflict quarantine",
+      "path": "services/platform/src/sovix/adapters/otlp/deduplication.py",
+      "requirements": [
+        "FR-023"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T047"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T049",
+      "description": "Implement unsupported runtime counters, ingestion lag and collector capability health",
+      "path": "services/platform/src/sovix/adapters/otlp/health.py",
+      "requirements": [
+        "FR-024"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T048"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T050",
+      "description": "Implement every US4 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/collectors.py",
+      "requirements": [
+        "FR-019",
+        "FR-020",
+        "FR-021",
+        "FR-022",
+        "FR-023",
+        "FR-024"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T049"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T051",
+      "description": "Implement agent telemetry UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/sessions/page.tsx",
+      "requirements": [
+        "FR-019",
+        "FR-020",
+        "FR-021",
+        "FR-022",
+        "FR-023",
+        "FR-024"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T050"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T052",
+      "description": "Run US4 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us4.spec.ts",
+      "requirements": [
+        "FR-019",
+        "FR-020",
+        "FR-021",
+        "FR-022",
+        "FR-023",
+        "FR-024"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T051"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "US4"
+    },
+    {
+      "id": "T053",
+      "description": "Write failing contract and adversarial acceptance fixtures for US5; cover all six requirements",
+      "path": "tests/integration/test_us5.py",
+      "requirements": [
+        "FR-025",
+        "FR-026",
+        "FR-027",
+        "FR-028",
+        "FR-029",
+        "FR-030"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T032",
+        "T052"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T054",
+      "description": "Implement evidence-based candidate/verified association rules with exact repository and revision identities",
+      "path": "services/platform/src/sovix/domain/linking.py",
+      "requirements": [
+        "FR-025"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T053"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T055",
+      "description": "Implement append-only analyst link adjudication with reason, evidence and optimistic concurrency",
+      "path": "services/platform/src/sovix/domain/adjudication.py",
+      "requirements": [
+        "FR-026"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T054"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T056",
+      "description": "Implement canonical usage cost estimation and separate billing/subscription allocation ledgers",
+      "path": "services/platform/src/sovix/analytics/costs.py",
+      "requirements": [
+        "FR-027"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T055"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T057",
+      "description": "Implement integer-ppm allocation conservation, decimal rounding and explicit unallocated remainder",
+      "path": "services/platform/src/sovix/analytics/allocation.py",
+      "requirements": [
+        "FR-028"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T056"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T058",
+      "description": "Implement immutable effective-dated rate catalogs and unknown-model/unpriced usage coverage",
+      "path": "services/platform/src/sovix/domain/prices.py",
+      "requirements": [
+        "FR-029"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T057"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T059",
+      "description": "Implement pinned cost/link/allocation revisions and snapshot-safe correction workflows",
+      "path": "services/platform/src/sovix/domain/corrections.py",
+      "requirements": [
+        "FR-030"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T058"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T060",
+      "description": "Implement every US5 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/costs.py",
+      "requirements": [
+        "FR-025",
+        "FR-026",
+        "FR-027",
+        "FR-028",
+        "FR-029",
+        "FR-030"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T059"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T061",
+      "description": "Implement attribution and costs UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/costs/page.tsx",
+      "requirements": [
+        "FR-025",
+        "FR-026",
+        "FR-027",
+        "FR-028",
+        "FR-029",
+        "FR-030"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T060"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T062",
+      "description": "Run US5 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us5.spec.ts",
+      "requirements": [
+        "FR-025",
+        "FR-026",
+        "FR-027",
+        "FR-028",
+        "FR-029",
+        "FR-030"
+      ],
+      "story": "US5",
+      "depends_on": [
+        "T061"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US5"
+      ],
+      "phase": "US5"
+    },
+    {
+      "id": "T063",
+      "description": "Write failing contract and adversarial acceptance fixtures for US6; cover all six requirements",
+      "path": "tests/integration/test_us6.py",
+      "requirements": [
+        "FR-031",
+        "FR-032",
+        "FR-033",
+        "FR-034",
+        "FR-035",
+        "FR-036"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T032",
+        "T042"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T064",
+      "description": "Implement saved report definitions with permitted scopes and explicit calendar window rules",
+      "path": "services/platform/src/sovix/domain/report_definitions.py",
+      "requirements": [
+        "FR-031"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T063"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T065",
+      "description": "Implement timezone-aware scheduler with unique logical slots, DST policy and bounded catch-up",
+      "path": "services/platform/src/sovix/workers/scheduler.py",
+      "requirements": [
+        "FR-032"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T064"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T066",
+      "description": "Implement atomic snapshot publication with pinned source/metric/privacy/allocation versions",
+      "path": "services/platform/src/sovix/reporting/snapshot.py",
+      "requirements": [
+        "FR-033"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T065"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T067",
+      "description": "Implement investigation state transitions, ownership, comments and resolution reasons",
+      "path": "services/platform/src/sovix/domain/investigations.py",
+      "requirements": [
+        "FR-034"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T066"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T068",
+      "description": "Implement per-principal in-product inbox with deduplicated report/action notifications",
+      "path": "services/platform/src/sovix/domain/inbox.py",
+      "requirements": [
+        "FR-035"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T067"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T069",
+      "description": "Implement download-time authorization, export expiry and revoked-resource invalidation",
+      "path": "services/platform/src/sovix/api/exports.py",
+      "requirements": [
+        "FR-036"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T068"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T070",
+      "description": "Implement every US6 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/reports.py",
+      "requirements": [
+        "FR-031",
+        "FR-032",
+        "FR-033",
+        "FR-034",
+        "FR-035",
+        "FR-036"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T069"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T071",
+      "description": "Implement reporting workflow UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/investigations/page.tsx",
+      "requirements": [
+        "FR-031",
+        "FR-032",
+        "FR-033",
+        "FR-034",
+        "FR-035",
+        "FR-036"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T070"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T072",
+      "description": "Run US6 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us6.spec.ts",
+      "requirements": [
+        "FR-031",
+        "FR-032",
+        "FR-033",
+        "FR-034",
+        "FR-035",
+        "FR-036"
+      ],
+      "story": "US6",
+      "depends_on": [
+        "T071"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US6"
+      ],
+      "phase": "US6"
+    },
+    {
+      "id": "T073",
+      "description": "Write failing contract and adversarial acceptance fixtures for US7; cover all six requirements",
+      "path": "tests/integration/test_us7.py",
+      "requirements": [
+        "FR-037",
+        "FR-038",
+        "FR-039",
+        "FR-040",
+        "FR-041",
+        "FR-042"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T042",
+        "T072"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T074",
+      "description": "Implement bounded retention policies and workspace-scoped scheduled purging",
+      "path": "services/platform/src/sovix/domain/retention.py",
+      "requirements": [
+        "FR-037"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T073"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T075",
+      "description": "Implement project deletion fences, durable tombstones and all-store purge accounting",
+      "path": "services/platform/src/sovix/workers/deletion.py",
+      "requirements": [
+        "FR-038"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T074"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T076",
+      "description": "Implement cancellation, dead-letter recovery and bounded retry/backoff over fenced jobs",
+      "path": "services/platform/src/sovix/workers/recovery.py",
+      "requirements": [
+        "FR-039"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T075"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T077",
+      "description": "Implement payload-free health, freshness and SLO metrics with actionable alerts",
+      "path": "services/platform/src/sovix/api/health.py",
+      "requirements": [
+        "FR-040"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T076"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T078",
+      "description": "Implement encrypted backup/restore procedure that reapplies tombstones before serving traffic",
+      "path": "infra/restore.sh",
+      "requirements": [
+        "FR-041"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T077"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T079",
+      "description": "Implement entitlement limits, decompressed payload limits and tenant-fair queue admission",
+      "path": "services/platform/src/sovix/domain/quotas.py",
+      "requirements": [
+        "FR-042"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T078"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T080",
+      "description": "Implement every US7 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/lifecycle.py",
+      "requirements": [
+        "FR-037",
+        "FR-038",
+        "FR-039",
+        "FR-040",
+        "FR-041",
+        "FR-042"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T079"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T081",
+      "description": "Implement lifecycle and operations UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/settings/operations/page.tsx",
+      "requirements": [
+        "FR-037",
+        "FR-038",
+        "FR-039",
+        "FR-040",
+        "FR-041",
+        "FR-042"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T080"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T082",
+      "description": "Run US7 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us7.spec.ts",
+      "requirements": [
+        "FR-037",
+        "FR-038",
+        "FR-039",
+        "FR-040",
+        "FR-041",
+        "FR-042"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T081"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "US7"
+    },
+    {
+      "id": "T083",
+      "description": "Write failing contract and adversarial acceptance fixtures for US8; cover all six requirements",
+      "path": "tests/integration/test_us8.py",
+      "requirements": [
+        "FR-043",
+        "FR-044",
+        "FR-045",
+        "FR-046",
+        "FR-047",
+        "FR-048"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T062"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T084",
+      "description": "Implement deployment evidence adapter with environment/service/repository exact revision",
+      "path": "services/platform/src/sovix/adapters/deployments.py",
+      "requirements": [
+        "FR-043"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T083"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T085",
+      "description": "Implement incident evidence with independent impact/detection/recovery clocks and verified links",
+      "path": "services/platform/src/sovix/adapters/incidents.py",
+      "requirements": [
+        "FR-044"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T084"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T086",
+      "description": "Implement measured production frequency, lead time and recovery using eligible source populations",
+      "path": "services/platform/src/sovix/analytics/production.py",
+      "requirements": [
+        "FR-045"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T085"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T087",
+      "description": "Implement equal-window cohort comparisons with maturity, denominator and data-source checks",
+      "path": "services/platform/src/sovix/analytics/comparison.py",
+      "requirements": [
+        "FR-046"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T086"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T088",
+      "description": "Implement descriptive comparison language that prohibits causal ROI or individual productivity conclusions",
+      "path": "services/platform/src/sovix/reporting/comparison_copy.py",
+      "requirements": [
+        "FR-047"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T087"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T089",
+      "description": "Implement production result provenance and unavailable/partial states when deployment/incident evidence is absent",
+      "path": "services/platform/src/sovix/reporting/outcomes.py",
+      "requirements": [
+        "FR-048"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T088"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T090",
+      "description": "Implement every US8 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/outcomes.py",
+      "requirements": [
+        "FR-043",
+        "FR-044",
+        "FR-045",
+        "FR-046",
+        "FR-047",
+        "FR-048"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T089"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T091",
+      "description": "Implement production outcomes UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/outcomes/page.tsx",
+      "requirements": [
+        "FR-043",
+        "FR-044",
+        "FR-045",
+        "FR-046",
+        "FR-047",
+        "FR-048"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T090"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T092",
+      "description": "Run US8 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us8.spec.ts",
+      "requirements": [
+        "FR-043",
+        "FR-044",
+        "FR-045",
+        "FR-046",
+        "FR-047",
+        "FR-048"
+      ],
+      "story": "US8",
+      "depends_on": [
+        "T091"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US8"
+      ],
+      "phase": "US8"
+    },
+    {
+      "id": "T093",
+      "description": "Write failing contract and adversarial acceptance fixtures for US9; cover all six requirements",
+      "path": "tests/integration/test_us9.py",
+      "requirements": [
+        "FR-049",
+        "FR-050",
+        "FR-051",
+        "FR-052",
+        "FR-053",
+        "FR-054"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T082",
+        "T092"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T094",
+      "description": "Implement discriminated bounded rule schemas and deterministic exact-head tri-state evaluator",
+      "path": "services/platform/src/sovix/policy/evaluator.py",
+      "requirements": [
+        "FR-049"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T093"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T095",
+      "description": "Implement immutable draft/shadow policy versions, shadow adjudication and qualification report",
+      "path": "services/platform/src/sovix/policy/shadow.py",
+      "requirements": [
+        "FR-050"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T094"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T096",
+      "description": "Implement per-repository 100-head/14-day activation checks, admin confirmation and action allowlists",
+      "path": "services/platform/src/sovix/policy/activation.py",
+      "requirements": [
+        "FR-051"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T095"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T097",
+      "description": "Implement exact-SHA host adapter with separate credentials, per-action approval and live-state revalidation",
+      "path": "services/platform/src/sovix/policy/actions.py",
+      "requirements": [
+        "FR-052"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T096"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T098",
+      "description": "Enforce unknown-evidence refusal, trusted check producer IDs and provider-native protections",
+      "path": "services/platform/src/sovix/policy/host_guards.py",
+      "requirements": [
+        "FR-053"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T097"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T099",
+      "description": "Implement workspace kill switch, epoch fences and uncertain host-effect reconciliation without duplicate writes",
+      "path": "services/platform/src/sovix/policy/reconciliation.py",
+      "requirements": [
+        "FR-054"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T098"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T100",
+      "description": "Implement every US9 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/policies.py",
+      "requirements": [
+        "FR-049",
+        "FR-050",
+        "FR-051",
+        "FR-052",
+        "FR-053",
+        "FR-054"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T099"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T101",
+      "description": "Implement guarded policy actions UI including loading, empty, partial, error and permission states",
+      "path": "apps/console/app/policies/page.tsx",
+      "requirements": [
+        "FR-049",
+        "FR-050",
+        "FR-051",
+        "FR-052",
+        "FR-053",
+        "FR-054"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T100"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T102",
+      "description": "Run US9 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us9.spec.ts",
+      "requirements": [
+        "FR-049",
+        "FR-050",
+        "FR-051",
+        "FR-052",
+        "FR-053",
+        "FR-054"
+      ],
+      "story": "US9",
+      "depends_on": [
+        "T101"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US9"
+      ],
+      "phase": "US9"
+    },
+    {
+      "id": "T103",
+      "description": "Write failing contract and adversarial acceptance fixtures for US10; cover all six requirements",
+      "path": "tests/integration/test_us10.py",
+      "requirements": [
+        "FR-055",
+        "FR-056",
+        "FR-057",
+        "FR-058",
+        "FR-059",
+        "FR-060"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T104",
+      "description": "Implement isolated public ingestion store with no access to private source tables or tokens",
+      "path": "apps/radar/src/server/public-store.ts",
+      "requirements": [
+        "FR-055"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T103"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T105",
+      "description": "Implement profile field provenance, factual observations and separately labelled reconstruction/narrative",
+      "path": "apps/radar/src/server/provenance.ts",
+      "requirements": [
+        "FR-056"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T104"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T106",
+      "description": "Implement public search filters and browser-local watchlist with explicit clear action",
+      "path": "apps/radar/app/explore/page.tsx",
+      "requirements": [
+        "FR-057"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T105"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T107",
+      "description": "Implement server-bound preview and confirmation for authenticated GitHub issue requests with idempotency",
+      "path": "apps/radar/src/server/requests.ts",
+      "requirements": [
+        "FR-058"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T106"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T108",
+      "description": "Implement public ranking presentation without unsupported code-quality or productivity claims",
+      "path": "apps/radar/src/components/RankingExplanation.tsx",
+      "requirements": [
+        "FR-059"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T107"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T109",
+      "description": "Implement refresh/removal/private/archived lifecycle and invalidate obsolete public artifacts",
+      "path": "apps/radar/src/server/lifecycle.ts",
+      "requirements": [
+        "FR-060"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T108"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T110",
+      "description": "Implement every US10 REST operation in contracts/operations.md with typed errors and authorization",
+      "path": "services/platform/src/sovix/api/public.py",
+      "requirements": [
+        "FR-055",
+        "FR-056",
+        "FR-057",
+        "FR-058",
+        "FR-059",
+        "FR-060"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T109"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T111",
+      "description": "Implement public discovery UI including loading, empty, partial, error and permission states",
+      "path": "apps/radar/app/repository/[repositoryId]/page.tsx",
+      "requirements": [
+        "FR-055",
+        "FR-056",
+        "FR-057",
+        "FR-058",
+        "FR-059",
+        "FR-060"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T110"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T112",
+      "description": "Run US10 independent fixture journey, reject adversarial cases, and record results",
+      "path": "tests/e2e/us10.spec.ts",
+      "requirements": [
+        "FR-055",
+        "FR-056",
+        "FR-057",
+        "FR-058",
+        "FR-059",
+        "FR-060"
+      ],
+      "story": "US10",
+      "depends_on": [
+        "T111"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US10"
+      ],
+      "phase": "US10"
+    },
+    {
+      "id": "T113",
+      "description": "Implement browser OIDC PKCE callbacks, HttpOnly session, CSRF guards and BFF proxy",
+      "path": "apps/console/app/api/auth/route.ts",
+      "requirements": [
+        "FR-013",
+        "NFR-007",
+        "NFR-010"
+      ],
+      "story": "US3",
+      "depends_on": [
+        "T042"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3",
+        "AC-NFR007",
+        "AC-NFR010"
+      ],
+      "phase": "Integration"
+    },
+    {
+      "id": "T114",
+      "description": "Build Docker Compose local/hosted profiles with migration readiness and private object storage",
+      "path": "infra/compose.yaml",
+      "requirements": [
+        "NFR-004",
+        "FR-041"
+      ],
+      "story": "US7",
+      "depends_on": [
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR004",
+        "AC-US7"
+      ],
+      "phase": "Integration"
+    },
+    {
+      "id": "T115",
+      "description": "Complete migrated adapter parity, source license inventory and staged legacy rollback runbook",
+      "path": "docs/migration-results.md",
+      "requirements": [
+        "FR-002",
+        "SC-002"
+      ],
+      "story": "US1",
+      "depends_on": [
+        "T022",
+        "T032"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US1",
+        "AC-SC002"
+      ],
+      "phase": "Integration"
+    },
+    {
+      "id": "T116",
+      "description": "Load-test cached overview p95<=2s and evidence p95<=1s under declared concurrency",
+      "path": "tests/performance/read_latency.py",
+      "requirements": [
+        "NFR-001"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR001"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T117",
+      "description": "Load-test 50 repositories, 100k source records and 1m spans/workspace/day with tenant-fair queues",
+      "path": "tests/performance/capacity.py",
+      "requirements": [
+        "NFR-002"
+      ],
+      "story": null,
+      "depends_on": [
+        "T052",
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR002"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T118",
+      "description": "Measure ingest-to-query p95<=60s with duplicate and burst traffic",
+      "path": "tests/performance/ingestion.py",
+      "requirements": [
+        "NFR-003"
+      ],
+      "story": null,
+      "depends_on": [
+        "T052"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR003"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T119",
+      "description": "Exercise SLO monitoring and encrypted restore within RPO24h/RTO4h",
+      "path": "tests/operations/test_restore.py",
+      "requirements": [
+        "NFR-004"
+      ],
+      "story": null,
+      "depends_on": [
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR004"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T120",
+      "description": "Audit applicable WCAG2.2AA with keyboard, screen reader and automated checks across app and exports",
+      "path": "tests/e2e/accessibility.spec.ts",
+      "requirements": [
+        "NFR-005"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032",
+        "T042",
+        "T112"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR005"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T121",
+      "description": "Verify 360px responsive layout and contained wide tables in app and offline reports",
+      "path": "tests/e2e/responsive.spec.ts",
+      "requirements": [
+        "NFR-006"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032",
+        "T112"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR006"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T122",
+      "description": "Probe tenant/project isolation across APIs, RLS, queues, artifacts, caches and error responses",
+      "path": "tests/security/test_isolation.py",
+      "requirements": [
+        "NFR-007"
+      ],
+      "story": null,
+      "depends_on": [
+        "T042",
+        "T072",
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR007"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T123",
+      "description": "Verify canonical hashes, offline assets and blocked-network export operation",
+      "path": "tests/integration/test_determinism.py",
+      "requirements": [
+        "NFR-008"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR008"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T124",
+      "description": "Verify UTC half-open boundaries, named zones and DST schedule slots",
+      "path": "tests/integration/test_temporal.py",
+      "requirements": [
+        "NFR-009"
+      ],
+      "story": null,
+      "depends_on": [
+        "T072"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR009"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T125",
+      "description": "Seed canary secrets/content and assert absence across all accepted stores, logs and exports",
+      "path": "tests/security/test_redaction.py",
+      "requirements": [
+        "NFR-010"
+      ],
+      "story": null,
+      "depends_on": [
+        "T042",
+        "T052",
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR010"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T126",
+      "description": "Enforce schema compatibility, old-client fixture support and 90-day breaking-change migration plan",
+      "path": "tests/contract/test_compatibility.py",
+      "requirements": [
+        "NFR-011"
+      ],
+      "story": null,
+      "depends_on": [
+        "T022",
+        "T052",
+        "T112"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR011"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T127",
+      "description": "Prove analytics/report generation perform zero model calls; gate optional narrative by separate budget",
+      "path": "tests/integration/test_no_model_calls.py",
+      "requirements": [
+        "NFR-012"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032",
+        "T112"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-NFR012"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T128",
+      "description": "Measure first-run offline report under five minutes on the fixed reference repository",
+      "path": "tests/e2e/first_run.spec.ts",
+      "requirements": [
+        "SC-001"
+      ],
+      "story": null,
+      "depends_on": [
+        "T022",
+        "T032"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC001"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T129",
+      "description": "Recompute reference metrics and canonical manifest hashes against hand-calculated oracle fixtures",
+      "path": "tests/integration/test_golden_metrics.py",
+      "requirements": [
+        "SC-002"
+      ],
+      "story": null,
+      "depends_on": [
+        "T022",
+        "T032"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC002"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T130",
+      "description": "Run every adversarial tenant/project access probe and inspect denial uniformity",
+      "path": "tests/security/test_boundary_acceptance.py",
+      "requirements": [
+        "SC-003"
+      ],
+      "story": null,
+      "depends_on": [
+        "T042",
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC003"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T131",
+      "description": "Property-test duplicate ingestion and many-to-many allocations for exact unit and money conservation",
+      "path": "tests/property/test_conservation.py",
+      "requirements": [
+        "SC-004"
+      ],
+      "story": null,
+      "depends_on": [
+        "T052",
+        "T062"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC004"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T132",
+      "description": "Observe finding-to-arithmetic-to-source navigation within three interactions",
+      "path": "tests/e2e/evidence_navigation.spec.ts",
+      "requirements": [
+        "SC-005"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC005"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T133",
+      "description": "Compare missing/unsupported/partial/suppressed labels and numeric nulls across API/UI/exports",
+      "path": "tests/integration/test_availability_parity.py",
+      "requirements": [
+        "SC-006"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032",
+        "T042",
+        "T052"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC006"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T134",
+      "description": "Race retries and DST scheduler instances to prove unique logical report slot",
+      "path": "tests/integration/test_schedule_races.py",
+      "requirements": [
+        "SC-007"
+      ],
+      "story": null,
+      "depends_on": [
+        "T072"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC007"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T135",
+      "description": "Perform governed-data deletion then restore drill and confirm no payload can be served or reingested",
+      "path": "tests/operations/test_deletion_restore.py",
+      "requirements": [
+        "SC-008"
+      ],
+      "story": null,
+      "depends_on": [
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC008"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T136",
+      "description": "Inject head changes, revoked permissions, unknown checks and response loss; prove no unauthorized/duplicate host effect",
+      "path": "tests/integration/test_policy_races.py",
+      "requirements": [
+        "SC-009"
+      ],
+      "story": null,
+      "depends_on": [
+        "T102"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC009"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T137",
+      "description": "Run opt-in three-team pilot, capture decision evidence, and assess two-team usefulness hypothesis",
+      "path": "docs/pilot-evaluation.md",
+      "requirements": [
+        "SC-010"
+      ],
+      "story": null,
+      "depends_on": [
+        "T032",
+        "T062",
+        "T072"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC010"
+      ],
+      "phase": "Release quality"
+    },
+    {
+      "id": "T138",
+      "description": "Verify release quickstart from clean machine and publish reproducible local release artifacts after release review",
+      "path": "docs/release-checklist.md",
+      "requirements": [
+        "SC-001",
+        "NFR-011"
+      ],
+      "story": null,
+      "depends_on": [
+        "T113",
+        "T114",
+        "T115",
+        "T116",
+        "T117",
+        "T118",
+        "T119",
+        "T120",
+        "T121",
+        "T122",
+        "T123",
+        "T124",
+        "T125",
+        "T126",
+        "T127",
+        "T128",
+        "T129",
+        "T130",
+        "T131",
+        "T132",
+        "T133",
+        "T134",
+        "T135",
+        "T136",
+        "T137"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-SC001",
+        "AC-NFR011"
+      ],
+      "phase": "Release quality"
+    }
+  ],
+  "requirements": {
+    "NFR-011": {
+      "tasks": [
+        "T001",
+        "T002",
+        "T007",
+        "T009",
+        "T126",
+        "T138"
+      ],
+      "acceptance": [
+        "AC-NFR011",
+        "AC-SC001",
+        "AC-US1",
+        "AC-US3"
+      ]
+    },
+    "NFR-006": {
+      "tasks": [
+        "T003",
+        "T012",
+        "T121"
+      ],
+      "acceptance": [
+        "AC-NFR005",
+        "AC-NFR006"
+      ]
+    },
+    "FR-005": {
+      "tasks": [
+        "T004",
+        "T013",
+        "T018",
+        "T020",
+        "T021",
+        "T022"
+      ],
+      "acceptance": [
+        "AC-NFR010",
+        "AC-US1"
+      ]
+    },
+    "NFR-010": {
+      "tasks": [
+        "T004",
+        "T011",
+        "T113",
+        "T125"
+      ],
+      "acceptance": [
+        "AC-NFR007",
+        "AC-NFR010",
+        "AC-US1",
+        "AC-US3"
+      ]
+    },
+    "NFR-009": {
+      "tasks": [
+        "T005",
+        "T124"
+      ],
+      "acceptance": [
+        "AC-NFR009",
+        "AC-US2"
+      ]
+    },
+    "FR-007": {
+      "tasks": [
+        "T005",
+        "T023",
+        "T024",
+        "T030",
+        "T031",
+        "T032"
+      ],
+      "acceptance": [
+        "AC-NFR009",
+        "AC-US2"
+      ]
+    },
+    "FR-013": {
+      "tasks": [
+        "T006",
+        "T007",
+        "T033",
+        "T034",
+        "T040",
+        "T041",
+        "T042",
+        "T113"
+      ],
+      "acceptance": [
+        "AC-NFR007",
+        "AC-NFR010",
+        "AC-NFR011",
+        "AC-US1",
+        "AC-US3"
+      ]
+    },
+    "NFR-007": {
+      "tasks": [
+        "T006",
+        "T113",
+        "T122"
+      ],
+      "acceptance": [
+        "AC-NFR007",
+        "AC-NFR010",
+        "AC-US3"
+      ]
+    },
+    "FR-004": {
+      "tasks": [
+        "T007",
+        "T008",
+        "T013",
+        "T017",
+        "T020",
+        "T021",
+        "T022"
+      ],
+      "acceptance": [
+        "AC-NFR011",
+        "AC-US1",
+        "AC-US3",
+        "AC-US7"
+      ]
+    },
+    "FR-039": {
+      "tasks": [
+        "T008",
+        "T073",
+        "T076",
+        "T080",
+        "T081",
+        "T082"
+      ],
+      "acceptance": [
+        "AC-US1",
+        "AC-US7"
+      ]
+    },
+    "SC-002": {
+      "tasks": [
+        "T010",
+        "T115",
+        "T129"
+      ],
+      "acceptance": [
+        "AC-NFR008",
+        "AC-SC002",
+        "AC-US1"
+      ]
+    },
+    "NFR-008": {
+      "tasks": [
+        "T010",
+        "T123"
+      ],
+      "acceptance": [
+        "AC-NFR008",
+        "AC-SC002"
+      ]
+    },
+    "FR-016": {
+      "tasks": [
+        "T011",
+        "T033",
+        "T037",
+        "T040",
+        "T041",
+        "T042"
+      ],
+      "acceptance": [
+        "AC-NFR010",
+        "AC-US3"
+      ]
+    },
+    "NFR-005": {
+      "tasks": [
+        "T012",
+        "T120"
+      ],
+      "acceptance": [
+        "AC-NFR005",
+        "AC-NFR006"
+      ]
+    },
+    "FR-001": {
+      "tasks": [
+        "T013",
+        "T014",
+        "T020",
+        "T021",
+        "T022"
+      ],
+      "acceptance": [
+        "AC-US1"
+      ]
+    },
+    "FR-002": {
+      "tasks": [
+        "T013",
+        "T015",
+        "T020",
+        "T021",
+        "T022",
+        "T115"
+      ],
+      "acceptance": [
+        "AC-SC002",
+        "AC-US1"
+      ]
+    },
+    "FR-003": {
+      "tasks": [
+        "T013",
+        "T016",
+        "T020",
+        "T021",
+        "T022"
+      ],
+      "acceptance": [
+        "AC-US1"
+      ]
+    },
+    "FR-006": {
+      "tasks": [
+        "T013",
+        "T019",
+        "T020",
+        "T021",
+        "T022"
+      ],
+      "acceptance": [
+        "AC-US1"
+      ]
+    },
+    "FR-008": {
+      "tasks": [
+        "T023",
+        "T025",
+        "T030",
+        "T031",
+        "T032"
+      ],
+      "acceptance": [
+        "AC-US2"
+      ]
+    },
+    "FR-009": {
+      "tasks": [
+        "T023",
+        "T026",
+        "T030",
+        "T031",
+        "T032"
+      ],
+      "acceptance": [
+        "AC-US2"
+      ]
+    },
+    "FR-010": {
+      "tasks": [
+        "T023",
+        "T027",
+        "T030",
+        "T031",
+        "T032"
+      ],
+      "acceptance": [
+        "AC-US2"
+      ]
+    },
+    "FR-011": {
+      "tasks": [
+        "T023",
+        "T028",
+        "T030",
+        "T031",
+        "T032"
+      ],
+      "acceptance": [
+        "AC-US2"
+      ]
+    },
+    "FR-012": {
+      "tasks": [
+        "T023",
+        "T029",
+        "T030",
+        "T031",
+        "T032"
+      ],
+      "acceptance": [
+        "AC-US2"
+      ]
+    },
+    "FR-014": {
+      "tasks": [
+        "T033",
+        "T035",
+        "T040",
+        "T041",
+        "T042"
+      ],
+      "acceptance": [
+        "AC-US3"
+      ]
+    },
+    "FR-015": {
+      "tasks": [
+        "T033",
+        "T036",
+        "T040",
+        "T041",
+        "T042"
+      ],
+      "acceptance": [
+        "AC-US3"
+      ]
+    },
+    "FR-017": {
+      "tasks": [
+        "T033",
+        "T038",
+        "T040",
+        "T041",
+        "T042"
+      ],
+      "acceptance": [
+        "AC-US3"
+      ]
+    },
+    "FR-018": {
+      "tasks": [
+        "T033",
+        "T039",
+        "T040",
+        "T041",
+        "T042"
+      ],
+      "acceptance": [
+        "AC-US3"
+      ]
+    },
+    "FR-019": {
+      "tasks": [
+        "T043",
+        "T044",
+        "T050",
+        "T051",
+        "T052"
+      ],
+      "acceptance": [
+        "AC-US4"
+      ]
+    },
+    "FR-020": {
+      "tasks": [
+        "T043",
+        "T045",
+        "T050",
+        "T051",
+        "T052"
+      ],
+      "acceptance": [
+        "AC-US4"
+      ]
+    },
+    "FR-021": {
+      "tasks": [
+        "T043",
+        "T046",
+        "T050",
+        "T051",
+        "T052"
+      ],
+      "acceptance": [
+        "AC-US4"
+      ]
+    },
+    "FR-022": {
+      "tasks": [
+        "T043",
+        "T047",
+        "T050",
+        "T051",
+        "T052"
+      ],
+      "acceptance": [
+        "AC-US4"
+      ]
+    },
+    "FR-023": {
+      "tasks": [
+        "T043",
+        "T048",
+        "T050",
+        "T051",
+        "T052"
+      ],
+      "acceptance": [
+        "AC-US4"
+      ]
+    },
+    "FR-024": {
+      "tasks": [
+        "T043",
+        "T049",
+        "T050",
+        "T051",
+        "T052"
+      ],
+      "acceptance": [
+        "AC-US4"
+      ]
+    },
+    "FR-025": {
+      "tasks": [
+        "T053",
+        "T054",
+        "T060",
+        "T061",
+        "T062"
+      ],
+      "acceptance": [
+        "AC-US5"
+      ]
+    },
+    "FR-026": {
+      "tasks": [
+        "T053",
+        "T055",
+        "T060",
+        "T061",
+        "T062"
+      ],
+      "acceptance": [
+        "AC-US5"
+      ]
+    },
+    "FR-027": {
+      "tasks": [
+        "T053",
+        "T056",
+        "T060",
+        "T061",
+        "T062"
+      ],
+      "acceptance": [
+        "AC-US5"
+      ]
+    },
+    "FR-028": {
+      "tasks": [
+        "T053",
+        "T057",
+        "T060",
+        "T061",
+        "T062"
+      ],
+      "acceptance": [
+        "AC-US5"
+      ]
+    },
+    "FR-029": {
+      "tasks": [
+        "T053",
+        "T058",
+        "T060",
+        "T061",
+        "T062"
+      ],
+      "acceptance": [
+        "AC-US5"
+      ]
+    },
+    "FR-030": {
+      "tasks": [
+        "T053",
+        "T059",
+        "T060",
+        "T061",
+        "T062"
+      ],
+      "acceptance": [
+        "AC-US5"
+      ]
+    },
+    "FR-031": {
+      "tasks": [
+        "T063",
+        "T064",
+        "T070",
+        "T071",
+        "T072"
+      ],
+      "acceptance": [
+        "AC-US6"
+      ]
+    },
+    "FR-032": {
+      "tasks": [
+        "T063",
+        "T065",
+        "T070",
+        "T071",
+        "T072"
+      ],
+      "acceptance": [
+        "AC-US6"
+      ]
+    },
+    "FR-033": {
+      "tasks": [
+        "T063",
+        "T066",
+        "T070",
+        "T071",
+        "T072"
+      ],
+      "acceptance": [
+        "AC-US6"
+      ]
+    },
+    "FR-034": {
+      "tasks": [
+        "T063",
+        "T067",
+        "T070",
+        "T071",
+        "T072"
+      ],
+      "acceptance": [
+        "AC-US6"
+      ]
+    },
+    "FR-035": {
+      "tasks": [
+        "T063",
+        "T068",
+        "T070",
+        "T071",
+        "T072"
+      ],
+      "acceptance": [
+        "AC-US6"
+      ]
+    },
+    "FR-036": {
+      "tasks": [
+        "T063",
+        "T069",
+        "T070",
+        "T071",
+        "T072"
+      ],
+      "acceptance": [
+        "AC-US6"
+      ]
+    },
+    "FR-037": {
+      "tasks": [
+        "T073",
+        "T074",
+        "T080",
+        "T081",
+        "T082"
+      ],
+      "acceptance": [
+        "AC-US7"
+      ]
+    },
+    "FR-038": {
+      "tasks": [
+        "T073",
+        "T075",
+        "T080",
+        "T081",
+        "T082"
+      ],
+      "acceptance": [
+        "AC-US7"
+      ]
+    },
+    "FR-040": {
+      "tasks": [
+        "T073",
+        "T077",
+        "T080",
+        "T081",
+        "T082"
+      ],
+      "acceptance": [
+        "AC-US7"
+      ]
+    },
+    "FR-041": {
+      "tasks": [
+        "T073",
+        "T078",
+        "T080",
+        "T081",
+        "T082",
+        "T114"
+      ],
+      "acceptance": [
+        "AC-NFR004",
+        "AC-US7"
+      ]
+    },
+    "FR-042": {
+      "tasks": [
+        "T073",
+        "T079",
+        "T080",
+        "T081",
+        "T082"
+      ],
+      "acceptance": [
+        "AC-US7"
+      ]
+    },
+    "FR-043": {
+      "tasks": [
+        "T083",
+        "T084",
+        "T090",
+        "T091",
+        "T092"
+      ],
+      "acceptance": [
+        "AC-US8"
+      ]
+    },
+    "FR-044": {
+      "tasks": [
+        "T083",
+        "T085",
+        "T090",
+        "T091",
+        "T092"
+      ],
+      "acceptance": [
+        "AC-US8"
+      ]
+    },
+    "FR-045": {
+      "tasks": [
+        "T083",
+        "T086",
+        "T090",
+        "T091",
+        "T092"
+      ],
+      "acceptance": [
+        "AC-US8"
+      ]
+    },
+    "FR-046": {
+      "tasks": [
+        "T083",
+        "T087",
+        "T090",
+        "T091",
+        "T092"
+      ],
+      "acceptance": [
+        "AC-US8"
+      ]
+    },
+    "FR-047": {
+      "tasks": [
+        "T083",
+        "T088",
+        "T090",
+        "T091",
+        "T092"
+      ],
+      "acceptance": [
+        "AC-US8"
+      ]
+    },
+    "FR-048": {
+      "tasks": [
+        "T083",
+        "T089",
+        "T090",
+        "T091",
+        "T092"
+      ],
+      "acceptance": [
+        "AC-US8"
+      ]
+    },
+    "FR-049": {
+      "tasks": [
+        "T093",
+        "T094",
+        "T100",
+        "T101",
+        "T102"
+      ],
+      "acceptance": [
+        "AC-US9"
+      ]
+    },
+    "FR-050": {
+      "tasks": [
+        "T093",
+        "T095",
+        "T100",
+        "T101",
+        "T102"
+      ],
+      "acceptance": [
+        "AC-US9"
+      ]
+    },
+    "FR-051": {
+      "tasks": [
+        "T093",
+        "T096",
+        "T100",
+        "T101",
+        "T102"
+      ],
+      "acceptance": [
+        "AC-US9"
+      ]
+    },
+    "FR-052": {
+      "tasks": [
+        "T093",
+        "T097",
+        "T100",
+        "T101",
+        "T102"
+      ],
+      "acceptance": [
+        "AC-US9"
+      ]
+    },
+    "FR-053": {
+      "tasks": [
+        "T093",
+        "T098",
+        "T100",
+        "T101",
+        "T102"
+      ],
+      "acceptance": [
+        "AC-US9"
+      ]
+    },
+    "FR-054": {
+      "tasks": [
+        "T093",
+        "T099",
+        "T100",
+        "T101",
+        "T102"
+      ],
+      "acceptance": [
+        "AC-US9"
+      ]
+    },
+    "FR-055": {
+      "tasks": [
+        "T103",
+        "T104",
+        "T110",
+        "T111",
+        "T112"
+      ],
+      "acceptance": [
+        "AC-US10"
+      ]
+    },
+    "FR-056": {
+      "tasks": [
+        "T103",
+        "T105",
+        "T110",
+        "T111",
+        "T112"
+      ],
+      "acceptance": [
+        "AC-US10"
+      ]
+    },
+    "FR-057": {
+      "tasks": [
+        "T103",
+        "T106",
+        "T110",
+        "T111",
+        "T112"
+      ],
+      "acceptance": [
+        "AC-US10"
+      ]
+    },
+    "FR-058": {
+      "tasks": [
+        "T103",
+        "T107",
+        "T110",
+        "T111",
+        "T112"
+      ],
+      "acceptance": [
+        "AC-US10"
+      ]
+    },
+    "FR-059": {
+      "tasks": [
+        "T103",
+        "T108",
+        "T110",
+        "T111",
+        "T112"
+      ],
+      "acceptance": [
+        "AC-US10"
+      ]
+    },
+    "FR-060": {
+      "tasks": [
+        "T103",
+        "T109",
+        "T110",
+        "T111",
+        "T112"
+      ],
+      "acceptance": [
+        "AC-US10"
+      ]
+    },
+    "NFR-004": {
+      "tasks": [
+        "T114",
+        "T119"
+      ],
+      "acceptance": [
+        "AC-NFR004",
+        "AC-US7"
+      ]
+    },
+    "NFR-001": {
+      "tasks": [
+        "T116"
+      ],
+      "acceptance": [
+        "AC-NFR001"
+      ]
+    },
+    "NFR-002": {
+      "tasks": [
+        "T117"
+      ],
+      "acceptance": [
+        "AC-NFR002"
+      ]
+    },
+    "NFR-003": {
+      "tasks": [
+        "T118"
+      ],
+      "acceptance": [
+        "AC-NFR003"
+      ]
+    },
+    "NFR-012": {
+      "tasks": [
+        "T127"
+      ],
+      "acceptance": [
+        "AC-NFR012"
+      ]
+    },
+    "SC-001": {
+      "tasks": [
+        "T128",
+        "T138"
+      ],
+      "acceptance": [
+        "AC-NFR011",
+        "AC-SC001"
+      ]
+    },
+    "SC-003": {
+      "tasks": [
+        "T130"
+      ],
+      "acceptance": [
+        "AC-SC003"
+      ]
+    },
+    "SC-004": {
+      "tasks": [
+        "T131"
+      ],
+      "acceptance": [
+        "AC-SC004"
+      ]
+    },
+    "SC-005": {
+      "tasks": [
+        "T132"
+      ],
+      "acceptance": [
+        "AC-SC005"
+      ]
+    },
+    "SC-006": {
+      "tasks": [
+        "T133"
+      ],
+      "acceptance": [
+        "AC-SC006"
+      ]
+    },
+    "SC-007": {
+      "tasks": [
+        "T134"
+      ],
+      "acceptance": [
+        "AC-SC007"
+      ]
+    },
+    "SC-008": {
+      "tasks": [
+        "T135"
+      ],
+      "acceptance": [
+        "AC-SC008"
+      ]
+    },
+    "SC-009": {
+      "tasks": [
+        "T136"
+      ],
+      "acceptance": [
+        "AC-SC009"
+      ]
+    },
+    "SC-010": {
+      "tasks": [
+        "T137"
+      ],
+      "acceptance": [
+        "AC-SC010"
+      ]
+    }
+  }
+}

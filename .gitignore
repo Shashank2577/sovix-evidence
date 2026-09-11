@@ -1,0 +1,20 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+.next/
+.pytest_cache/
+.coverage
+coverage/
+.local/
+artifacts/private/
+*.pem
+*.key
+
+# Agent tooling state, not product content
+.omc/
+.claude/settings.local.json
