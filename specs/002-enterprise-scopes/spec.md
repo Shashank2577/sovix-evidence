@@ -116,6 +116,10 @@ was them.
    subject opens their own view, **then** both identities' records appear as one population.
 4. **Given** an owner who ran a named-person query about the subject, **when** the subject opens
    their view-of-me record, **then** the actor, window, scope and time of that query are listed.
+5. **Given** a Receipts `report.json` carrying `person` scopes with plaintext emails, names and a
+   ranked `top_contributors` list, **when** it is imported, **then** each person resolves to a
+   pseudonymous handle, no plaintext identity is persisted, and the ranked list is not imported at
+   all rather than imported and hidden.
 
 ---
 
@@ -195,6 +199,13 @@ found without revealing existence.
 - A window that begins before installation for some repositories in an organization scope and after
   installation for others.
 - An AIBOM document whose signature algorithm is the HMAC fallback rather than Ed25519.
+- A Receipts `report.json` whose `project` carries a `repos[]` list containing a repository absent
+  from the same report's `repo:` scopes, and one whose `person` scope exists for a bot.
+- A Receipts import in which two `person` entries digest to the same contributor because their
+  email lists overlap.
+- A team request against a Receipts import, which expresses no team level at all.
+- A metric whose `tier` is proxy and whose `caveats` list is empty, and one whose `sample.n` exceeds
+  `sample.population`.
 
 ## Requirements *(mandatory)*
 
@@ -299,6 +310,22 @@ found without revealing existence.
   records change, when a metric definition version changes, or when a project or team mapping
   affecting it changes. A stale partial aggregate MUST NOT serve a query; its scope MUST report
   partial availability until recomputation completes.
+- **FR-123**: Every scope MUST be produced by filtering one flat set of raw records and re-running
+  identical metric code, never by combining another scope's computed outputs. Receipts is the
+  reference implementation: `metrics/__init__.py:6-7` records that "scopes are produced by filtering
+  the raw record set rather than by aggregating other scopes' results, the same code produces every
+  level", realized as `Dataset.for_repo`, `Dataset.for_project` and `Dataset.for_person` over one
+  `Dataset` (`model.py:394-400`). Decision: adopt this structure, because it makes a median of
+  medians impossible to express rather than merely forbidden, which is a stronger guarantee than
+  FR-075 can give by rule alone.
+- **FR-124**: Team scope MUST be implemented as a filter over that same flat record set followed by
+  the same metric code, per FR-063's resolution. It MUST NOT be implemented by combining
+  per-contributor results, per-repository results or per-project results. A team metric and a
+  hand-computed metric over the same filtered records MUST agree exactly.
+- **FR-125**: The partial aggregates of FR-082 are a read path for organization scope only and MUST
+  NOT become a second calculation path. An organization value computed from partial aggregates MUST
+  equal the value computed by filtering the flat record set directly, and an equivalence test across
+  both paths MUST be an acceptance gate.
 
 #### Access control
 
@@ -380,26 +407,41 @@ found without revealing existence.
   preserve existing contributor rows and their aliases by rewriting digests inside the trusted
   process, and MUST NOT orphan historical attribution. A rotation MUST be an audited act.
 
-#### Reconciliation with the existing AIBOM scope enum
+#### Reconciliation of the three existing scope vocabularies
 
-The sibling product Prompture ships an HMAC or Ed25519 signed AIBOM document whose `Scope` enum
-is `personal | project | team | enterprise` (`packages/aibom/aibom.go:50-63`). Its declared
-semantics differ from its names.
+Three scope vocabularies exist in shipping code. Receipts defines
+`level: Literal["org", "project", "repo", "person"]` with `key`, `label`, `since`, `until` and
+`repos` (`evidence.py:132-147`), emitting keys `org:all`, `project:<Name>`, `repo:<owner/name>` and
+`person:<identity_key>` (`report.py:92-137`). Prompture AIBOM defines
+`personal | project | team | enterprise` (`packages/aibom/aibom.go:50-63`). ADR-012 defines
+`repository | team | project | organization`.
 
-- **FR-103**: The canonical scope vocabulary MUST be the four levels of FR-061. The AIBOM enum
-  MUST be treated as an external contract translated by a versioned adapter per Principle IV, and
-  MUST NOT be adopted as the internal vocabulary. Decision: the AIBOM enum is canonical for the
-  AIBOM document format only, because it is already signed into issued artifacts that cannot be
-  rewritten, and FR-061 is canonical everywhere else.
-- **FR-104**: The adapter MUST apply exactly this mapping, which is derived from the enum's
-  declared population rather than from its member names:
+- **FR-103**: The canonical scope vocabulary MUST be ADR-012's four levels as stated in FR-061.
+  Decision: ADR-012 is canonical because it is the only vocabulary whose member names match their
+  populations, the only one containing all four levels, and the only one in which `team` is a real
+  population. Receipts and AIBOM vocabularies MUST be treated as external contracts translated by
+  versioned adapters per Principle IV, and MUST NOT be adopted internally. Each remains canonical
+  for its own already-emitted artifact format, which cannot be rewritten retroactively.
+- **FR-104**: The adapters MUST apply exactly this mapping, derived from each vocabulary's declared
+  population rather than from its member names:
 
-  | AIBOM value | Declared population (aibom.go:53-56) | Canonical level | Note |
+  | Canonical level (FR-061) | Receipts | AIBOM | Note |
   |---|---|---|---|
-  | `personal` | Commits whose author email is in the caller's own identities | `contributor` filter, self | Maps to the self-view row of FR-087, not to a level |
-  | `project` | All commits to a single `repo_id`, an `owner/repo` string | `repository` | Named project, is actually repository scope |
-  | `team` | All commits and prompts across the org, filtered by `org_id` | `organization` | Named team, is actually organization scope |
-  | `enterprise` | Identical to `team`, plus `policy_violations` | `organization` | Not a level; a content variant of the same population |
+  | `repository` | `repo`, key `repo:<owner/name>` | Its `project`, a single `repo_id` of form `owner/repo` | AIBOM's member name contradicts its population |
+  | `team` | Absent | `team` in name only; its population is org-wide | No existing vocabulary expresses a real team population |
+  | `project` | `project`, key `project:<Name>`, carries `repos[]` | Absent | Receipts is the only multi-repository project grouping |
+  | `organization` | `org`, key `org:all` | Its `team` and its `enterprise`, both org-wide | AIBOM `enterprise` is a content variant, not a level |
+  | `contributor` filter, self | `person`, key `person:<identity_key>` | `personal` | Maps to the self-view row of FR-087, not to a level |
+
+- **FR-121**: `team` MUST be added to the analytics core as a real population. Decision: this is the
+  single genuine gap across all three vocabularies. Receipts has no team at all, and AIBOM's `team`
+  member denotes the organization, so neither can be reused. The Team entity of FR-067 and the
+  resolution rule of FR-063 exist to fill it, and no adapter may satisfy a team request by
+  substituting an organization or project population.
+- **FR-122**: An adapter MUST NOT invent a level its source does not express. A Receipts import MUST
+  report `team` as unavailable with a missing-level reason, and an AIBOM import MUST report both
+  `team` and `project` as unavailable, rather than returning a value computed over a different
+  population.
 
 - **FR-105**: The adapter MUST record that the AIBOM enum expresses only three distinct
   populations (self, one repository, whole organization) and no team-level or multi-repository
@@ -413,6 +455,58 @@ semantics differ from its names.
   refused, because the format has no value that denotes those populations and reusing `team` for a
   team would produce a signed artifact whose scope label contradicts its contents. Extending the
   AIBOM format is out of scope here and requires a versioned format change under NFR-011.
+
+#### Evidence contract enforcement
+
+Receipts already enforces the per-metric evidence contract in code. `Metric.validate()`
+(`evidence.py:186-211`) raises on a missing id, label, `plain_english`, `why_it_matters`,
+`how_to_read` or `formula`, on a `confidence`, `direction` or `tier` outside its allowed set, on
+absent named `inputs`, on `sources` empty with no `no_sources_reason`, on `sample.n` exceeding
+`sample.population`, on a non-`measured` tier with zero `caveats`, and on a NaN or infinite value.
+
+- **FR-126**: The evidence contract of FR-007 MUST be enforced by a validator that fails the build
+  rather than by review. Decision: adopt the `Metric.validate()` rule set above as the baseline
+  rather than inventing one, because it is already shipping, already gates CI, and already encodes
+  the two rules that matter most: a metric with no sources must say why, and a proxy or inferred
+  metric must carry at least one caveat.
+- **FR-127**: The validator MUST additionally reject a metric whose scope level is absent, whose
+  scope level is not one of FR-061's four, or whose `sample.population` is zero while its
+  availability is `available`, since FR-078 makes an empty population unavailable rather than zero.
+- **FR-128**: Receipts' `tier` of `measured | proxy | inferred` MUST map to spec 001's evidence kind
+  of the same three names with no semantic change, and its `confidence` of `high | medium | low`
+  MUST be retained as a distinct field. Confidence MUST NOT be collapsed into availability, because
+  a measured value can be low confidence and a partial value can be high confidence.
+
+#### Person scope retention and pseudonymization
+
+Receipts ships a `person` scope today, so spec 001's FR-017 forbids what shipping code already
+does. ADR-013 governs and the person scope is retained. Receipts currently resolves real identities:
+`Person` carries `display_name`, `emails`, `names` and `github_login` (`model.py:271-279`), the
+person scope label is the plaintext display name (`report.py:137`), and the person scope's `facts`
+block writes `emails`, `names` and `github_login` into `report.json` (report.py:142-146).
+
+- **FR-129**: The person scope MUST be retained and MUST be governed by FR-087 and FR-090 through
+  FR-098. This supersedes FR-017's prohibition on identity filters. Ranking remains prohibited.
+- **FR-130**: A person scope's key, label and facts MUST carry only the pseudonymous handle of
+  FR-069. The `emails`, `names` and `github_login` members MUST NOT appear in any emitted report,
+  and `display_name` MUST be replaced by the handle in every hosted artifact. Local mode resolves a
+  display name live at render time per FR-097 and MUST NOT write it into the artifact either.
+- **FR-131**: Two ranked contributor primitives exist in Receipts and MUST be removed rather than
+  suppressed, hidden or gated:
+
+  | Primitive | Location | Required disposition |
+  |---|---|---|
+  | `top_contributors`, sorted by churn descending and truncated to 25 | `report.py:346-354`, `_contributor_table` sort at report.py:364 | Removed. It is an ordered top-N contributor list, which FR-090 forbids as a capability |
+  | Per-contributor AI-trace share, ranked and truncated to 15 sources and 5 exemplars, each carrying a plaintext `person_name` | `metrics/ai.py:185-213` | Removed. Ranking contributors by AI adoption is the most sensitive form of the prohibited primitive |
+
+- **FR-132**: A caveat stating that output is "not a ranking" MUST NOT be accepted as compliance
+  when the producing code sorts by a metric and truncates to a count. `metrics/ai.py:209-211` is
+  exactly that case. Compliance with FR-090 MUST be demonstrated by the absence of the sort and the
+  truncation, not by accompanying text.
+- **FR-133**: Contributor-dimension output MUST be an unordered set. Where a stable presentation
+  order is required, it MUST be by the handle's canonical collation and MUST NOT be by any metric
+  value. Exemplar selection MUST NOT rank contributors, though it MAY rank changes, pull requests
+  or commits, which Receipts already does safely (`metrics/delivery.py:62`).
 
 #### Plaintext identity at the ingestion boundary
 
@@ -441,6 +535,11 @@ leaks sit inside the signed AIBOM document itself: `CommitEntry.AuthorEmail` and
 - **FR-111**: Import from a plaintext-identity source MUST NOT create a path by which that
   plaintext re-enters an artifact. An artifact generated from imported records MUST carry only
   pseudonymous handles per FR-095, regardless of what the source artifact carried.
+- **FR-134**: Importing a Receipts `report.json` MUST digest `person.emails` and discard
+  `person.names`, `display_name` and `github_login` at the ingestion boundary per FR-108, MUST map
+  its four scope levels per FR-104, and MUST NOT import `top_contributors` or the ranked
+  per-contributor AI-trace sources at all, because importing a ranking reconstructs the primitive
+  FR-090 forbids even when this platform does not produce one.
 - **FR-112**: A leak test MUST exist as an acceptance gate. It MUST seed a known corpus of
   plaintext identities and prompt fragments into every supported import path, then assert their
   total absence from the database, every index, every log stream, every job payload, every
@@ -549,6 +648,14 @@ diffs and no pull request, review or check records.
   resident revisions requires approximately 50 days of continuous backfill. Decision: an
   organization overview MUST therefore be usable while backfill is incomplete, with FR-118
   coverage disclosure, rather than gated on backfill completion.
+- **NFR-025**: The flat-record filter path of FR-123 MUST remain the definition of correctness at
+  every scope level and at enterprise-tier volume. Where FR-082 partial aggregates are used for
+  latency, the equivalence test of FR-125 MUST run over the full enterprise-tier fixture, not a
+  reduced one, because an aggregation defect appears only at the scale where sharing and
+  deduplication occur.
+- **NFR-026**: Removal of the FR-131 ranking primitives MUST be verifiable statically. The absence
+  of contributor ordering MUST be demonstrable by inspecting the schema and query surface without
+  executing the system, so that a reviewer can confirm FR-090 without trusting runtime behavior.
 
 ### Key Entities
 
@@ -617,12 +724,30 @@ diffs and no pull request, review or check records.
 - **SC-026**: For a window beginning 180 days before app installation, the organization overview
   states the uncovered interval and the count of partially covered repositories, and no metric for
   that window reports zero for the pre-installation interval.
+- **SC-027**: For every metric and every scope level, the value produced by the FR-123 flat-record
+  filter path and the value produced by the FR-082 partial-aggregate path are identical in their
+  canonical representation across the full enterprise-tier fixture.
+- **SC-028**: A team metric equals a hand-computed metric over the same FR-063 filtered record set
+  for all 57 imported metric families, and no team value is derivable from any combination of
+  per-contributor, per-repository or per-project values.
+- **SC-029**: A Receipts `report.json` fixture containing 12 people imports with zero plaintext
+  emails, names, display names or GitHub logins present anywhere in the platform database or any
+  emitted artifact, and its `top_contributors` and ranked AI-trace members are absent from the
+  import result entirely rather than present and hidden.
+- **SC-030**: A static inspection of the schema and query surface finds zero contributor-ordering
+  capability, and the metric validator rejects a fixture metric that sorts contributors by value,
+  proving FR-132 is enforced by structure rather than by caveat text.
+- **SC-031**: The FR-126 validator rejects each of its nine failure classes on a purpose-built
+  invalid fixture, and a metric whose scope level is absent or whose population is zero while
+  availability is `available` is rejected per FR-127.
 
 ## Supersessions
 
 | Spec 001 text | Effect of this specification |
 |---|---|
-| FR-017 "arbitrary identity filters and individual leaderboards MUST be unavailable" | Amended. Leaderboards remain prohibited and become architecturally impossible (FR-090). Identity filters become permitted under FR-091 through FR-093. |
+| FR-017 "arbitrary identity filters and individual leaderboards MUST be unavailable" | Amended. Leaderboards remain prohibited and become architecturally impossible (FR-090, FR-131). Identity filters become permitted under FR-091 through FR-093 and FR-129. The prohibition as written forbade a person scope that Receipts already ships. |
+| FR-009 "Cross-repository rollups MUST recompute eligible raw populations" | Retained and strengthened by FR-123 from a rule into a structural property, following the Receipts reference implementation. |
+| FR-007 evidence contract | Retained. FR-126 makes it a build-time validator rather than a review obligation, adopting the shipping Receipts rule set. |
 | FR-031 "Analysts MUST save project-scoped report definitions" | Amended by FR-073 to any scope level within the analyst's grant. |
 | FR-016 "aggregate people signals" | Widened to permit pseudonymous contributor handles per ADR-011. Plaintext identity remains prohibited. |
 | NFR-001 overview p95 2 seconds | Retained for repository, team and project. Superseded by NFR-014 for organization only. |
@@ -632,8 +757,35 @@ diffs and no pull request, review or check records.
 
 ## External System Reconciliation
 
-Prompture (`/Users/shashanksaxena/Documents/Personal/Code/sovix-ai`) is treated as a source system
-under Principle IV, not as a design precedent, except where cited. Its state as inspected on
+Two source systems are treated as external contracts under Principle IV, not as design precedents,
+except where explicitly cited as such.
+
+### Receipts
+
+Inspected at `/Users/shashanksaxena/Downloads/github 2/receipts` on 2026-09-12, default branch
+`main`, Apache-2.0, Python. 57 metrics across delivery, velocity, quality, ai, people, process,
+temporal and ci families.
+
+| Observation | Location | Effect here |
+|---|---|---|
+| `Scope` with `level: Literal["org","project","repo","person"]`, key, label, since, until, repos | evidence.py:132-147 | FR-103, FR-104 |
+| Scope keys `org:all`, `project:<Name>`, `repo:<owner/name>`, `person:<identity_key>` | report.py:92-137 | FR-104 |
+| No team level anywhere | evidence.py:142 | FR-121, FR-122 |
+| Every scope produced by filtering one flat `Dataset` and re-running identical metric code | metrics/__init__.py:6-7, model.py:394-400 | FR-123, FR-124; adopted as the reference implementation of FR-075 |
+| `Metric.validate()` fails on absent inputs, on sources empty without `no_sources_reason`, on non-measured tier without caveats | evidence.py:186-211 | FR-126, FR-127; adopted as the evidence contract baseline |
+| `tier` measured/proxy/inferred and separate `confidence` high/medium/low | evidence.py:197-202 | FR-128 |
+| `Person` carries `display_name`, `emails`, `names`, `github_login` | model.py:271-279 | FR-130, FR-134 |
+| Person scope `facts` writes `emails`, `names`, `github_login` into report.json | report.py:142-146 | FR-130; a full plaintext identity dump in the emitted artifact |
+| Person scope label is the plaintext display name | report.py:137 | FR-130 |
+| `top_contributors` sorted by churn descending, truncated to 25 | report.py:346-354, report.py:364 | FR-131; a shipping contributor leaderboard |
+| Per-contributor AI-trace share ranked, top 15 sources and top 5 exemplars, each with plaintext `person_name` | metrics/ai.py:185-213 | FR-131, FR-132 |
+| Caveat text asserts "not as a ranking" while the code sorts and truncates | metrics/ai.py:209-211 | FR-132 |
+| Exemplars rank changes and pull requests, not contributors | metrics/delivery.py:62 | FR-133; this pattern is permitted |
+| `person` scope ships today, which spec 001 FR-017 forbids | evidence.py:142, report.py:135-137 | FR-129; ADR-013 governs and FR-017 is superseded |
+
+### Prompture
+
+Prompture (`/Users/shashanksaxena/Documents/Personal/Code/sovix-ai`) state as inspected on
 2026-09-12:
 
 | Observation | Location | Effect here |
@@ -680,3 +832,13 @@ under Principle IV, not as a design precedent, except where cited. Its state as 
   inferred rather than recorded boundary.
 - The AIBOM format is owned by Prompture. This specification consumes it and does not extend it;
   a team-scope or project-scope AIBOM value would require a versioned format change on that side.
+- Receipts is Apache-2.0. Its metric definitions and its flat-dataset filter structure may be
+  adopted here, but Constitution "Product and Security Constraints" requires its license and
+  revision to be recorded before any source is copied, and upstream notices survive vendoring.
+  Adopting the structure of FR-123 by description is not vendoring; copying metric code is.
+- Receipts' 57 metrics are treated as candidate definitions requiring the versioning of
+  metrics.md, not as an approved registry. Mapping them to canonical IDs is a separate exercise,
+  and metrics.md already forbids renaming a legacy ID with changed semantics.
+- Removing the FR-131 ranking primitives is a breaking change to the Receipts `report.json`
+  consumers that read `top_contributors`. This specification governs what this platform produces
+  and imports; coordinating that removal upstream is a separate decision for that product.
