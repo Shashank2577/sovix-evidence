@@ -136,6 +136,21 @@ class RedactionManifest:
     manifest_digest: str = ""
 
     def compute_digest(self) -> str:
+        """Digest over the *redaction* content only: profile, ruleset
+        version, and what was done to each field class. Deliberately
+        excludes `leak_tests` and `manifest_digest` itself.
+
+        Excluding `leak_tests` avoids a real circularity, not just a
+        theoretical one: leak tests run against the *rendered* artifact,
+        which is produced after this manifest exists, and LT-07 itself
+        checks this digest against `manifest_digest`. If the digest
+        covered `leak_tests`, sealing would have to happen after LT-07's
+        own result was known — but LT-07's result depends on the sealed
+        digest. `redact_report` calls `seal()` right after producing
+        `field_classes`/`removed_counts`, before render or any leak test
+        runs, so LT-07 verifies the redaction record wasn't altered
+        between then and publish — which is what it can actually check.
+        """
         import hashlib
         import json
 
@@ -144,15 +159,15 @@ class RedactionManifest:
             "redaction_version": self.redaction_version,
             "field_classes": self.field_classes,
             "removed_counts": self.removed_counts,
-            "leak_tests": self.leak_tests,
         }
         blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
     def seal(self) -> None:
-        """Recompute and store `manifest_digest`. Call after `leak_tests`
-        is fully populated; LT-07 checks this value against a fresh
-        `compute_digest()`."""
+        """Recompute and store `manifest_digest`. `redact_report` calls
+        this before returning; LT-07 later checks this value against a
+        fresh `compute_digest()` to confirm nothing in the redaction
+        record changed since."""
         self.manifest_digest = self.compute_digest()
 
     def is_publishable(self) -> bool:
@@ -183,6 +198,39 @@ class _Redactor:
         self.contributor_breakdown_allowed = (
             profile == "pseudonymous"
             and contributor_cohort_size >= K_ANONYMITY_MIN
+        )
+        # Built once, after `_collect_plaintexts` has seen the whole
+        # report, and reused by every `_scrub_text` call in this pass. A
+        # real report has hundreds of identities and calls `_scrub_text`
+        # once per metric's formula/display plus once per source's ref;
+        # rebuilding the needle set and recompiling a regex on every one
+        # of those calls was the dominant cost of `redact_report` on the
+        # 111-scope axios fixture (unset until `build_scrub_pattern` runs).
+        self.scrub_pattern: re.Pattern | None = None
+        self.scrub_replacements_lower: dict[str, str] = {}
+
+    def build_scrub_pattern(self) -> None:
+        """Call once, after every identity `_collect_plaintexts` will find
+        has been registered. Safe to call again — recomputing after the
+        needle set has stopped growing is a cheap no-op in effect, just
+        not necessary."""
+        replacements: dict[str, str] = {}
+        for plaintext in self.pseudo.known_plaintexts:
+            replacements[plaintext] = self.pseudo.handle_for(plaintext)
+        for plaintext in self.pseudo.known_plaintexts_in("repo"):
+            replacements[plaintext] = self.pseudo.opaque_label("repo", plaintext)
+        needles = sorted(
+            {p for p in replacements if len(p) >= 3}, key=len, reverse=True
+        )
+        self.scrub_replacements_lower = {
+            n.lower(): replacements[n] for n in needles
+        }
+        self.scrub_pattern = (
+            re.compile(
+                "|".join(re.escape(n) for n in needles), re.IGNORECASE
+            )
+            if needles
+            else None
         )
 
     def _bump(self, cls: str, n: int = 1) -> None:
@@ -307,25 +355,31 @@ def _collect_plaintexts(report: Report, r: _Redactor) -> None:
                         r.pseudo.opaque_label("repo", ex.source.repo)
 
 
-def _scrub_text(text: str, pseudo: Pseudonymizer) -> str:
-    """Defense-in-depth: replace every known contributor plaintext that
-    appears as a substring of `text`, case-insensitively, with its handle.
-    Field-level redaction above handles every case this module could
-    identify by field name; this catches an identity that leaked into a
-    field through data interpolation rather than through its own field.
+def _scrub_text(text: str, r: _Redactor) -> str:
+    """Defense-in-depth: replace every known contributor identity *or*
+    private-repository plaintext that appears as a substring of `text`,
+    case-insensitively, with its handle/label. Field-level redaction above
+    handles every case this module could identify by field name; this
+    catches an identity or a repo name that leaked into a field through
+    data interpolation rather than through its own field (e.g. a
+    `dataset`-kind `Source.ref` that is literally the referenced scope's
+    key: `person:person:email:x@y` — see `_collect_plaintexts`).
+
+    Deliberately pulls from both the "contributor" and "repo" namespaces
+    (not `pseudo.known_plaintexts`, which is contributor-only — that
+    narrower set is what LT-02 scans, and conflating the two there is what
+    produced a false contributor-identity leak against a repository
+    label in the first place). Uses the single needle pattern
+    `r.build_scrub_pattern` compiled once per `redact_report` call, rather
+    than rebuilding it here: this runs once per metric's formula/display
+    plus once per source's ref, and a real report has enough identities
+    that rebuilding on every call was the dominant cost of redaction.
     """
-    if not text:
+    if not text or r.scrub_pattern is None:
         return text
-    # Longest first, so "Jason Saayman" is replaced before a bare "Jason"
-    # substring match (if one were ever also a known plaintext) could
-    # fragment it.
-    for plaintext in sorted(pseudo.known_plaintexts, key=len, reverse=True):
-        if len(plaintext) < 3:
-            continue
-        pattern = re.compile(re.escape(plaintext), re.IGNORECASE)
-        if pattern.search(text):
-            text = pattern.sub(pseudo.handle_for(plaintext), text)
-    return text
+    return r.scrub_pattern.sub(
+        lambda m: r.scrub_replacements_lower[m.group(0).lower()], text
+    )
 
 
 def _redact_scope(scope: Scope | None, r: _Redactor) -> Scope | None:
@@ -455,7 +509,7 @@ def _redact_source(source: Source | None, r: _Redactor) -> Source | None:
         # Receipts' own double-prefixed scope key) — scrub it the same way
         # as any other free text, rather than assume it is always a bare
         # identifier like a PR number.
-        ref=_scrub_text(source.ref, r.pseudo),
+        ref=_scrub_text(source.ref, r),
         # `detail` is free-form narrative generated from the source record
         # (e.g. "merged after 22.2 days") and is not on the structured
         # allowlist, so it is dropped rather than kept verbatim.
@@ -508,8 +562,8 @@ def _redact_metric(m: Metric, r: _Redactor) -> Metric | None:
     # `formula`/`display` are scrubbed for the same identity leaking in
     # through interpolated text.
     redacted_inputs = _redact_inputs(m.inputs, r)
-    formula = _scrub_text(m.formula, r.pseudo)
-    display = _scrub_text(m.display, r.pseudo)
+    formula = _scrub_text(m.formula, r)
+    display = _scrub_text(m.display, r)
     return Metric(
         id=m.id,
         label=m.label,
@@ -619,6 +673,7 @@ def redact_report(
     cohort_size = len(report.contributor_scope_keys)
     r = _Redactor(profile, pseudo, public_repos, cohort_size)
     _collect_plaintexts(report, r)
+    r.build_scrub_pattern()
 
     new_scopes: dict[str, ScopeReport] = {}
     key_remap: dict[str, str] = {}
@@ -694,4 +749,8 @@ def redact_report(
         field_classes=field_classes,
         removed_counts=dict(r.counts),
     )
+    # Sealed here, before render or any leak test runs — see
+    # RedactionManifest.compute_digest for why leak_tests is excluded from
+    # what gets sealed.
+    manifest.seal()
     return new_report, manifest

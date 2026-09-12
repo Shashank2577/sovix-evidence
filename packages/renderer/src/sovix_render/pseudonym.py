@@ -104,6 +104,39 @@ def _identity_components(plaintext: str) -> set[str]:
     return out
 
 
+_BOT_SUFFIX_RE = re.compile(r"\[bot\]\s*$", re.IGNORECASE)
+# GitHub's own convention for an automated account is the "[bot]" suffix,
+# but the same account's bare login (no suffix) is what the REST API
+# returns for a pull request author, even though its commit-author form
+# carries the suffix — both forms show up in real Receipts data for the
+# one account. This short list covers the bare form for the handful of
+# bots common enough to be worth naming explicitly.
+_KNOWN_BOT_ACCOUNTS = frozenset({
+    "dependabot", "renovate", "renovate-bot", "github-actions",
+    "copilot", "snyk-bot", "greenkeeper", "codecov", "allcontributors",
+})
+
+
+def _is_bot_account_name(name: str) -> bool:
+    """Whether `name` is an automated account by GitHub's own naming
+    convention (or one of the well-known ones that drop it), rather than a
+    human contributor.
+
+    This matters specifically for what LT-02 treats as a needle: a bot's
+    account name is not the kind of identity ADR-011 protects — its `kind`
+    is `bot`, not `human`, precisely because a bot login is not personal
+    data. Several of these names also collide with unrelated legitimate
+    content: registering "dependabot" as a forbidden needle flagged the
+    repository's own, intentionally-kept `.github/dependabot.yml` path in
+    real axios data, and "Copilot" flagged this product's own static
+    AI-tool-detection copy. The account is still pseudonymized normally
+    (`_pseudonymize` always returns a handle); this only controls whether
+    its plaintext form is added to the needle set a leak test scans for.
+    """
+    n = (name or "").strip().lower()
+    return bool(_BOT_SUFFIX_RE.search(n)) or n in _KNOWN_BOT_ACCOUNTS
+
+
 def identity_digest(email: str, key: bytes) -> str:
     """HMAC-SHA256 over the normalized lowercase, stripped email."""
     normalized = _normalize(email)
@@ -156,15 +189,25 @@ class Pseudonymizer:
         # new capability" and reported a contributor leak. Scoping the set
         # keeps each test's needles semantically what that test is about.
         seen = self._known_by_namespace.setdefault(namespace, set())
-        seen.add(plaintext)
-        seen.add(normalized)
+        is_contributor = namespace == _CONTRIBUTOR_NAMESPACE
+        if not (is_contributor and _is_bot_account_name(plaintext)):
+            seen.add(plaintext)
+            seen.add(normalized)
         # Record the identity's COMPONENTS too, not only the string as
         # supplied. A git identity usually arrives as "Name <email>", and a
-        # leak virtually never reproduces that whole form: it surfaces as the
-        # bare display name in a table cell, or as the address on its own.
-        # Recording only the combined string made LT-02 unable to catch a
-        # planted full name, which is the exact failure it exists to prevent.
-        seen.update(_identity_components(plaintext))
+        # leak virtually never reproduces that whole form: it surfaces as
+        # the bare display name in a table cell, or as the address on its
+        # own. Recording only the combined string made LT-02 unable to
+        # catch a planted full name, which is the exact failure it exists
+        # to prevent. Each component is filtered for bot-shape on its own,
+        # not just the plaintext as a whole: a noreply address's extracted
+        # local-part suffix (`+copilot@...` -> "copilot") is exactly as
+        # much a bot name as the bare login is, even when the address
+        # itself doesn't look like one.
+        for component in _identity_components(plaintext):
+            if is_contributor and _is_bot_account_name(component):
+                continue
+            seen.add(component)
 
         by_plaintext = self._digest_by_plaintext.setdefault(namespace, {})
         digest = by_plaintext.get(normalized)

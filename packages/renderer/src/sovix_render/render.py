@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import html
+import json
 from dataclasses import dataclass
 
 from . import charts, tokens as T
@@ -64,6 +65,56 @@ class Provenance:
 def _short_digest(s: str, n: int = 12) -> str:
     d = hashlib.sha256(s.encode()).hexdigest()
     return f"{d[:8]}·{d[8:8+4]}" if n >= 12 else d[:n]
+
+
+def provenance_block(report: Report, scope: ScopeReport, prov: Provenance) -> str:
+    """Machine-readable provenance, embedded as an inert JSON script block.
+
+    Two reasons this exists rather than leaving provenance to prose.
+
+    A reader who wants to verify the artifact should not have to scrape
+    sentences: the window, the scope, the digests and the coverage summary
+    are the facts that make the page checkable, so they are published in a
+    form a machine can read.
+
+    It also gives LT-06 something real to check. LT-06 validates that every
+    rendered field key is on a structured allowlist, and it works by parsing
+    `application/json` blocks. With no such block in the document it passed
+    vacuously, which is worse than failing: it reported success while
+    checking nothing. Every key below is on the allowlist deliberately, so
+    the test now exercises a real path and would catch a future field that
+    is not.
+
+    The block is `type="application/json"`, which browsers do not execute.
+    """
+    body = {
+        "schema_version": report.schema_version,
+        "org_label": report.org_label,
+        "root_scope": report.root_scope,
+        "scope": {
+            "level": scope.scope.level,
+            "key": scope.scope.key,
+            "label": scope.scope.label,
+            "since": scope.scope.since,
+            "until": scope.scope.until,
+            "repos": list(scope.scope.repos),
+        },
+        "profile": "pseudonymous",
+        "redaction_version": prov.redaction_version,
+        "content_digest": prov.content_digest,
+        "coverage": {
+            "repos_collected": report.coverage.repos_collected,
+            "repos_failed": report.coverage.repos_failed,
+            "total_lines_excluded_as_generated": (
+                report.coverage.total_lines_excluded_as_generated
+            ),
+        },
+    }
+    # Escaping "</" prevents a value from closing the script element early;
+    # nothing here is attacker-controlled today, but the renderer should not
+    # depend on that staying true.
+    payload = json.dumps(body, sort_keys=True, indent=None).replace("</", "<\\/")
+    return f'<script type="application/json" id="provenance">{payload}</script>'
 
 
 # ── metric card ─────────────────────────────────────────────────────────────
@@ -480,5 +531,6 @@ def render_page(
       document. That capability does not exist in the system that produced it.</p>
   </div>
 </section>
+{provenance_block(report, scope, prov)}
 </div>
 """

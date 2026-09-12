@@ -134,15 +134,27 @@ def lt_02_no_plaintext_identity(html: str, pseudo: Pseudonymizer) -> str:
     find. LT-02 exists to catch a redaction regression, and a regression
     would surface as a full name token, not as three letters inside a word.
     """
-    lowered = html.lower()
-    for plaintext in pseudo.known_plaintexts:
-        needle = (plaintext or "").strip()
-        if len(needle) < MIN_IDENTITY_NEEDLE:
-            continue
-        if re.search(rf"(?<!\w){re.escape(needle.lower())}(?!\w)", lowered):
-            return _fail(
-                "known contributor plaintext identity in rendered output"
-            )
+    needles = sorted(
+        {
+            (p or "").strip().lower()
+            for p in pseudo.known_plaintexts
+            if len((p or "").strip()) >= MIN_IDENTITY_NEEDLE
+        },
+        key=len,
+        reverse=True,
+    )
+    if not needles:
+        return "pass"
+    # One compiled alternation, one pass over the (possibly multi-MB)
+    # rendered output, rather than one full re-scan per needle. A real
+    # artifact can carry hundreds of contributor needles; scanning the
+    # whole string once per needle turned this check into the slowest part
+    # of running the leak-test suite.
+    pattern = re.compile(
+        r"(?<!\w)(?:" + "|".join(re.escape(n) for n in needles) + r")(?!\w)"
+    )
+    if pattern.search(html.lower()):
+        return _fail("known contributor plaintext identity in rendered output")
     return "pass"
 
 
@@ -227,8 +239,20 @@ def lt_06_field_keys_allowlisted(html: str) -> str:
 
 
 def lt_07_manifest_integrity(manifest: RedactionManifest) -> str:
+    if not manifest.manifest_digest:
+        # A distinct message from the mismatch case below: an empty field
+        # means sealing never ran (a pipeline-wiring bug, e.g. forgetting
+        # `redact_report`'s internal `manifest.seal()` or overwriting
+        # `manifest_digest` afterward without resealing) — a different
+        # cause from a digest that WAS recorded but no longer recomputes
+        # (which points at tampering or a stale render), and the two are
+        # not worth debugging as if they were the same failure.
+        return _fail("manifest_digest is empty; the manifest was never sealed")
     if manifest.compute_digest() != manifest.manifest_digest:
-        return _fail("manifest digest does not recompute to its recorded value")
+        return _fail(
+            "manifest_digest is present but does not recompute to the same "
+            "value; the redaction record changed after sealing"
+        )
     return "pass"
 
 
