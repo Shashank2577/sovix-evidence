@@ -23,6 +23,7 @@ from . import model
 from .leaktests import run_all
 from .pseudonym import Pseudonymizer, derive_key
 from .redact import redact_report
+from .site import build_site
 from .render import Provenance, render_page
 
 REDACTION_VERSION = "1"
@@ -58,6 +59,7 @@ def build(
     public_repos: frozenset[str],
     title: str | None,
     fail_on_leak: bool = True,
+    as_site: bool = False,
 ) -> int:
     try:
         report = model.load(report_path)
@@ -84,6 +86,15 @@ def build(
         report, profile=profile, pseudo=pseudo, public_repos=public_repos
     )
     manifest.redaction_version = REDACTION_VERSION
+
+    if as_site:
+        pages, code = build_site(
+            report, redacted, manifest, pseudo, out_dir,
+            redaction_version=REDACTION_VERSION,
+            public_repos=public_repos,
+            fail_on_leak=fail_on_leak,
+        )
+        return code
 
     # 3. Render.
     scope = redacted.scopes[scope_key]
@@ -201,6 +212,16 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     p.add_argument(
+        "--site",
+        action="store_true",
+        help=(
+            "render every organization, project and repository scope as a "
+            "linked site instead of a single page. Contributor scopes are "
+            "never given pages: a directory of per-person pages is a "
+            "leaderboard by another name."
+        ),
+    )
+    p.add_argument(
         "--allow-leaks",
         action="store_true",
         help="write the artifact even if a leak test fails. For local "
@@ -216,6 +237,7 @@ def main(argv: list[str] | None = None) -> int:
         public_repos=frozenset(a.public_repo),
         title=a.title,
         fail_on_leak=not a.allow_leaks,
+        as_site=a.site,
     )
 
 

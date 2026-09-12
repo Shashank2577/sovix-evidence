@@ -17,7 +17,7 @@ on:
     inputs:
       repos:
         description: "Space-separated public repositories to collect"
-        default: "axios/axios helm/helm"
+        default: "axios/axios helm/helm eslint/eslint fastapi/fastapi vitejs/vite mitmproxy/mitmproxy"
       since:
         description: "Collect history from this date"
         default: "2025-09-01"
@@ -56,7 +56,7 @@ jobs:
       - name: Collect public repositories
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOS: ${{ github.event.inputs.repos || 'axios/axios helm/helm' }}
+          REPOS: ${{ github.event.inputs.repos || 'axios/axios helm/helm eslint/eslint fastapi/fastapi vitejs/vite mitmproxy/mitmproxy' }}
           SINCE: ${{ github.event.inputs.since || '2025-09-01' }}
         run: |
           set -euo pipefail
@@ -73,10 +73,10 @@ jobs:
           # unredacted (ADR-014 rule 2a). Contributor identities are
           # pseudonymized regardless of the repository's visibility.
           public_args=""
-          for r in ${{ github.event.inputs.repos || 'axios/axios helm/helm' }}; do
+          for r in ${{ github.event.inputs.repos || 'axios/axios helm/helm eslint/eslint fastapi/fastapi vitejs/vite mitmproxy/mitmproxy' }}; do
             public_args="$public_args --public-repo $r"
           done
-          sovix-render out/report.json --out site/ --profile pseudonymous $public_args
+          sovix-render out/report.json --out site/ --site --profile pseudonymous $public_args
           test -f site/index.html
           test -f site/manifest.json
 
@@ -86,23 +86,36 @@ jobs:
           # A belt-and-braces check independent of the renderer's own tests:
           # a remote reference here would mean the page depends on a third
           # party to render, which ADR-014 rule 6 forbids.
-          if grep -nEo '(src|href)="https?://[^"]*"' site/index.html; then
-            echo "::error::published artifact references a remote asset"
-            exit 1
-          fi
-          if grep -nEo 'url\(\s*["'"'"']?https?://' site/index.html; then
-            echo "::error::stylesheet references a remote asset"
-            exit 1
-          fi
-          echo "self-contained: no remote references"
+          # Check EVERY page, not just the root: a site where one page is
+          # clean and another is not would be worse than none, because the
+          # clean pages lend the leaking one credibility.
+          pages=$(find site -name index.html | sort)
+          echo "checking $(echo "$pages" | wc -l) page(s)"
+          for f in $pages; do
+            if grep -nEo '(src|href)="https?://[^"]*"' "$f"; then
+              echo "::error::$f references a remote asset"; exit 1
+            fi
+            if grep -nEo 'url\(\s*["'"'"']?https?://' "$f"; then
+              echo "::error::$f stylesheet references a remote asset"; exit 1
+            fi
+            if grep -nEoc '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' "$f" | grep -qv '^0$'; then
+              echo "::error::$f contains an email-shaped string"; exit 1
+            fi
+          done
+          echo "self-contained: no remote references, no email-shaped strings"
           python - <<'PY'
           import json, pathlib
           m = json.loads(pathlib.Path("site/manifest.json").read_text())
-          failed = {k: v for k, v in m["leak_tests"].items() if v != "pass"}
-          assert m["publishable"], f"manifest says not publishable: {failed}"
-          assert not failed, f"leak tests failed: {failed}"
-          print(f"leak tests: {len(m['leak_tests'])}/{len(m['leak_tests'])} pass")
+          assert m["publishable"], "manifest says not publishable"
+          pages = m["pages"]
+          assert pages, "manifest lists no pages"
+          for pg in pages:
+              failed = {k: v for k, v in pg["leak_tests"].items() if v != "pass"}
+              assert not failed, f"{pg['path']}: leak tests failed: {failed}"
+              n = len(pg["leak_tests"])
+              print(f"  {pg['level']:11s} {pg['path']:34s} {n}/{n} pass")
           print(f"profile: {m['profile']}  redaction: {m['redaction_version']}")
+          print(f"{len(pages)} page(s) cleared the gate")
           PY
 
       - uses: actions/upload-pages-artifact@v3

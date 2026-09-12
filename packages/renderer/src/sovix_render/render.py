@@ -372,7 +372,18 @@ def render_page(
     title: str | None = None,
     faces: dict[str, bytes] | None = None,
     manifest_note: str = "",
+    extra_css: str = "",
+    prologue: str = "",
 ) -> str:
+    """Render one scope as a complete, self-contained document.
+
+    `extra_css` is appended to the generated stylesheet and `prologue` is
+    emitted directly after the wrapper opens. Both exist so a multi-page site
+    can add scope navigation without a second rendering path: ADR-014 rule 6
+    requires the console, the offline export and the published artifact to
+    share one renderer, and a separate "site version" of this function would
+    be exactly the divergence that rule forbids.
+    """
     scope = report.scopes[scope_key]
     heading = title or scope.scope.label or report.org_label
     facts = scope.facts
@@ -470,9 +481,11 @@ def render_page(
 <style>
 {font_face_block(faces)}
 {stylesheet()}
+{extra_css}
 </style>
 {charts.svg_defs()}
 <div class="wrap">
+{prologue}
 <header>
   <div class="masthead">
     <div>
