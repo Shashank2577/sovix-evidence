@@ -70,21 +70,32 @@ assigned sizes; data-series tokens meet ≥4.5:1, exceeding the 3:1 non-text req
 
 **Categorical data ramp** (series colors; assign in order, never skip):
 
-| Token | Value | Contrast | Hue |
-|---|---|---|---|
-| `--data-1` | `#3d4fd7` | 6.2:1 | blue (same as accent — the instrument has one blue) |
-| `--data-2` | `#0e7a6e` | 5.1:1 | teal |
-| `--data-3` | `#a63d1b` | 6.2:1 | vermilion |
-| `--data-4` | `#7d4396` | 6.5:1 | plum |
-| `--data-5` | `#8a6d00` | 4.8:1 | olive |
-| `--data-6` | `#55606e` | 6.2:1 | slate |
+| Token | Value | Contrast | Relative luminance | Hue |
+|---|---|---|---|---|
+| `--data-1` | `#3d4fd7` | 6.16:1 | 0.1149 | blue (same as accent — the instrument has one blue) |
+| `--data-2` | `#0a544d` | 8.50:1 | 0.0694 | teal |
+| `--data-3` | `#b8411d` | 5.33:1 | 0.1406 | vermilion |
+| `--data-4` | `#58285c` | 10.84:1 | 0.0437 | plum |
+| `--data-5` | `#8c7000` | 4.58:1 | 0.1716 | olive |
+| `--data-6` | `#637182` | 4.82:1 | 0.1608 | slate |
 
-Rules: hues chosen from the Okabe–Ito colorblind-safe family, darkened for the light
-canvas; all six remain pairwise distinguishable under deuteranopia and protanopia because
-they differ in lightness as well as hue. Regardless: **series MUST also be distinguished
-by direct label, line dash or marker shape** (Principle 4) — the palette is redundancy,
-not the primary channel. More than six concurrent series on one chart is forbidden; split
-into small multiples (F8) instead.
+Rules: hues are chosen from the Okabe–Ito colorblind-safe family and tuned in lightness
+for the light canvas. Every adjacent pair, sorted by luminance, differs by more than
+0.008 relative luminance, so the ramp stays separable in grayscale and in monochrome
+print as well as under deuteranopia and protanopia. Regardless: **series MUST also be
+distinguished by direct label, line dash or marker shape** (Principle 4) — the palette is
+redundancy, not the primary channel. More than six concurrent series on one chart is
+forbidden; split into small multiples (F8) instead.
+
+**Correction, 2026-09-12.** This table's first draft specified `#0e7a6e`, `#a63d1b`,
+`#7d4396`, `#8a6d00` and `#55606e`, and claimed the six "differ in lightness as well as
+hue". That claim was false: blue, vermilion and slate sat at luminances 0.1149, 0.1152
+and 0.1142, within 0.001 of one another. They were three visually distinct colors on
+screen and one indistinguishable gray in monochrome, which the 600dpi print acceptance
+check in section 8 would have failed. The values above are the corrected ramp, with the
+luminance column added so the claim is checkable by inspection. The separation is
+asserted by `packages/renderer/tests/test_tokens.py`, which recomputes every ratio from
+the hex values rather than trusting this table.
 
 **Sequential ramp** (single-hue, monotone lightness; completeness meters, density cells):
 
@@ -92,10 +103,14 @@ into small multiples (F8) instead.
 `--seq-5 #6274d9` · `--seq-6 #3d4fd7` · `--seq-7 #1e2a68`
 
 Rules: monotone lightness makes order legible to all color-vision types and in grayscale.
-Steps 1–3 fail 3:1 against canvas and therefore MUST be enclosed by a `--hairline` cell
-boundary and accompanied by a printed value. No diverging ramp exists in this product:
-a diverging ramp encodes a midpoint judgment ("good/bad around a target"), which
-Principle 5 forbids.
+Steps **1 through 4** fail 3:1 against canvas and therefore MUST be enclosed by a
+`--hairline` cell boundary and accompanied by a printed value. No diverging ramp exists in
+this product: a diverging ramp encodes a midpoint judgment ("good/bad around a target"),
+which Principle 5 forbids.
+
+Measured ratios against canvas: seq-1 1.10:1, seq-2 1.36:1, seq-3 1.85:1, seq-4 2.70:1,
+seq-5 4.05:1, seq-6 6.16:1, seq-7 12.80:1. This draft previously said steps 1–3 needed a
+boundary; seq-4 is 2.70:1 and fails the 3:1 non-text threshold, so it needs one too.
 
 **Explicitly absent**: success-green, warning-amber, "AI purple" gradients, dark-mode
 palette (v1 is single-theme by design; the artifact commits to one printed look),

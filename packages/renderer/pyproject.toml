@@ -1,0 +1,27 @@
+[project]
+name = "sovix-render"
+version = "0.1.0"
+description = "Renders an evidence dashboard from a Receipts JSON 1.0 report. Deterministic, self-contained, zero remote assets."
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = []
+
+# No runtime dependencies, deliberately. The renderer must be auditable and
+# must never pull a transitive package that could reach the network at build
+# time. tests/test_no_dependencies.py enforces this.
+
+[project.scripts]
+sovix-render = "sovix_render.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
