@@ -18,3 +18,11 @@ artifacts/private/
 # Agent tooling state, not product content
 .omc/
 .claude/settings.local.json
+
+# Bare mirror clones made by `receipts collect`. Their git config embeds the
+# token used to fetch, so this directory must never be committed. GitHub push
+# protection caught exactly that here; the push was rejected and nothing
+# reached the remote, but the path is ignored now so it cannot recur.
+.receipts-cache/
+out/
+site/

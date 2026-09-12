@@ -119,9 +119,24 @@ _IDENTITY_INPUT_KEYS = frozenset({
 })
 
 
-def _date_only(ts: str | None) -> str | None:
-    if not ts:
-        return ts
+def _date_only(ts: object) -> str | None:
+    """Coarsen an ISO 8601 timestamp to its calendar date.
+
+    Only a string is a timestamp. A non-string reaching here means a key that
+    usually carries a timestamp carried something else instead, which happens
+    for real: the `merged` key on a source is an ISO string for a pull request
+    but an integer on other source kinds, and indexing an int raised a
+    TypeError that only appeared once the cohort widened past one repository.
+
+    A value whose type is not understood is dropped rather than guessed at.
+    Dropping is the privacy-safe direction: passing an unrecognised value
+    through would be publishing something this function never classified, and
+    coercing it to a string would invent a timestamp that was never observed.
+    """
+    if ts is None or ts == "":
+        return None
+    if not isinstance(ts, str):
+        return None
     return ts[:10]  # "YYYY-MM-DD" prefix of an ISO 8601 timestamp.
 
 
@@ -488,8 +503,16 @@ def _redact_source_values(values: dict, r: _Redactor) -> dict:
     if "title" in values:
         r._bump(CLASS_PR_TITLE)
     for key in ("opened", "merged"):
-        if key in values:
-            out[key] = r.redact_timestamp(values[key])
+        if key not in values:
+            continue
+        v = values[key]
+        if isinstance(v, str):
+            out[key] = r.redact_timestamp(v)
+        # A non-string under these keys is not a timestamp. `merged` is an ISO
+        # string on a pull-request source but an integer on other source
+        # kinds. Such a value is left for the safe-list check below to admit
+        # deliberately, rather than run through timestamp coarsening that
+        # cannot apply to it.
     for key, v in values.items():
         if key in _SAFE_SOURCE_VALUE_KEYS:
             out[key] = v
