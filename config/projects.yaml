@@ -1,0 +1,42 @@
+# Repository to project mapping for the published demonstration cohort.
+#
+# Without this file every repository becomes its own single-repository
+# project, so the project pages duplicate the repository pages exactly and the
+# project tier demonstrates nothing. Grouping by primary language gives a
+# project that genuinely spans several repositories, which is what exercises
+# the organization and project rollup rules in ADR-012:
+#
+#   - a project metric is recomputed from the union of its repositories' raw
+#     populations, never averaged from the per-repository results, so a
+#     median stays a real median
+#   - a repository counted in a project is counted once at organization level
+#
+# Language is the grouping used here because it is verifiable from the data
+# rather than asserted: a reader can check that helm is Go without trusting
+# this file. A real customer would group by team or product instead.
+
+projects:
+  JavaScript and TypeScript:
+    description: >
+      HTTP client, linter and build tooling for the JavaScript ecosystem.
+      Three repositories with distinct release cadences, which is what makes
+      the project rollup non-trivial.
+    repos:
+      - axios/axios
+      - eslint/eslint
+      - vitejs/vite
+
+  Python:
+    description: >
+      An async web framework and an interactive HTTPS proxy. Different
+      problem domains, shared language and packaging conventions.
+    repos:
+      - fastapi/fastapi
+      - mitmproxy/mitmproxy
+
+  Go:
+    description: >
+      Kubernetes package management. A single repository today, kept as its
+      own project so the language split stays legible.
+    repos:
+      - helm/helm

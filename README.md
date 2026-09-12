@@ -1,44 +1,177 @@
 # Sovix Evidence
 
-**From AI coding activity to engineering decisions—with evidence you can inspect.**
+**Engineering metrics where every number carries its evidence.**
 
-This repository specifies a product combining Sovix's local Git scanner, Receipts' evidence-backed reports, optional Dash0/Darkplane agent telemetry, and RepoRadar public discovery. It covers activity before a push, changes and reviews after a push, and production outcomes when explicit deployment/incident sources exist.
+Point it at a Git repository. It reads the history, computes 57 metrics, and
+publishes a report where every figure shows its formula, what was counted, what
+was excluded, and which records back it up.
 
-**Status: specification complete; application implementation has not started.** There are 10 user journeys, 60 functional requirements, 12 non-functional requirements, 10 success criteria, 138 planned tasks, and a generated OpenAPI contract with 99 operations. No production service or new host integration is running from this repository.
+### See it working
 
-## Start here
+**Live report: https://shashank2577.github.io/sovix-evidence/**
 
-| Document | What it answers |
-|---|---|
-| [Product pitch](docs/product-pitch.md) | Customer, problem, value, demo and commercial hypotheses |
-| [Product specification](specs/001-sovix-evidence/spec.md) | Full scope, user journeys, requirements and success criteria |
-| [Implementation plan](specs/001-sovix-evidence/plan.md) | Architecture, selected stack and milestone boundaries |
-| [Task backlog](specs/001-sovix-evidence/tasks.md) | 138 concrete, dependency-ordered implementation tasks |
-| [Quickstart](specs/001-sovix-evidence/quickstart.md) | Validate these specifications and begin implementation |
-| [Validation report](specs/001-sovix-evidence/validation.md) | Checks actually run and remaining implementation gates |
+That page is generated from six real open-source repositories — axios, helm,
+eslint, fastapi, vite and mitmproxy — by the code in this repository. No
+screenshots, no mockups. It is regenerated weekly by
+[a GitHub Action](.github/workflows/publish-pages.yml).
 
-## Domain and integration contracts
+### Try it on your own code in 30 seconds
 
-- [Domain vocabulary and invariants](specs/001-sovix-evidence/domain.md), [data model](specs/001-sovix-evidence/data-model.md), [metric catalog](specs/001-sovix-evidence/metrics.md).
-- [API semantics](specs/001-sovix-evidence/contracts/README.md), [OpenAPI 3.1.1](specs/001-sovix-evidence/contracts/openapi.json), [operation index](specs/001-sovix-evidence/contracts/operations.md), [CLI](specs/001-sovix-evidence/contracts/cli.md), [events](specs/001-sovix-evidence/contracts/events.md), [browser authentication](specs/001-sovix-evidence/contracts/bff.md).
-- [Integration capability matrix](specs/001-sovix-evidence/integrations.md), [policy evaluation and actions](specs/001-sovix-evidence/policy.md), [security/privacy](specs/001-sovix-evidence/security.md).
-- [UX and data presentation](specs/001-sovix-evidence/ux-spec.md), [operations](specs/001-sovix-evidence/operations.md), [migration](specs/001-sovix-evidence/migration.md).
-- [Acceptance scenarios](specs/001-sovix-evidence/acceptance.md), [requirement traceability](specs/001-sovix-evidence/traceability.json), [research decisions and sources](specs/001-sovix-evidence/research.md).
-
-## Scope of the first release
-
-M0 establishes contracts and foundations. M1 ships the useful local product: read-only scan/import, reproducible calculations, clear coverage, evidence drilldown and portable reports. M2 adds hosted access controls, agent telemetry and conservative cost association. M3 adds schedules, investigations and operational lifecycle. M4 adds actual production outcomes and explicitly approved host actions after shadow qualification. M5 adds isolated public discovery.
-
-The product will show observed associations and missing data. It will not equate session time with labor, model list prices with invoices, merge counts with production deployments, popularity with quality, or correlations with causal ROI. These constraints are part of the metric and policy contracts.
-
-## GitHub Spec Kit
-
-Initialized with official [GitHub Spec Kit v1.0.0](https://github.com/github/spec-kit/tree/v1.0.0), including Codex skills, templates and scripts. [Constitution](.specify/memory/constitution.md) and [provenance](docs/spec-kit-provenance.md) describe the setup. The feature is `specs/001-sovix-evidence`; the Git branch is `codex/001-sovix-evidence`.
-
-In Codex, the next implementation instruction is:
-
-```text
-$speckit-implement Implement M0 then M1 only, following the task dependencies and acceptance gates. Keep later milestones unimplemented.
+```bash
+pip install git+https://github.com/Shashank2577/receipts@master
+receipts demo                       # no token, no config, no network
 ```
 
-Read the implementation skill before executing. Specification checks do not establish application correctness, security or performance. Future application files named in the plan/tasks are not represented as already built.
+`receipts demo` builds a synthetic repository, analyses it, and writes a
+self-contained `dashboard.html` you can open by double-clicking. Then point it
+at something real:
+
+```bash
+receipts collect --repo axios/axios --out out/
+open out/dashboard.html
+```
+
+To publish a redacted, pseudonymous version suitable for a public URL:
+
+```bash
+pip install ./packages/renderer
+sovix-render out/report.json --out site/ --site --public-repo axios/axios
+```
+
+---
+
+## What problem this solves
+
+An engineering leader can already see commits, pull requests, CI runs and
+AI-agent token counters. What they cannot easily do is answer a question and
+show their work:
+
+> "Review coverage is 70%. Which 30% wasn't reviewed, how do you know, and what
+> did you exclude before computing it?"
+
+Most dashboards cannot answer that. A number appears, its derivation does not,
+and nobody can tell whether a low figure means a real problem or a collection
+gap. This tool treats that derivation as the product.
+
+Every metric ships with:
+
+| Field | What it gives you |
+|---|---|
+| `formula` | The arithmetic with the real numbers substituted, e.g. `46 reviewed / 72 merged = 63.9%` |
+| `sample` | How many records were read, out of how many exist, and the coverage percentage |
+| `excluded` | What was left out and why — "78 pull requests not merged" |
+| `sources` | The actual commits, PRs and reviews behind the number, with links |
+| `exemplars` | The single strongest piece of evidence, ranked, with prose explaining why it proves the figure |
+| `tier` | `measured`, `proxy`, or `inferred` — how the number was obtained |
+| `confidence` | `high`, `medium`, or `low` |
+| `caveats` | What would make this number wrong |
+
+A metric that cannot cite a source, or a proxy metric with no caveat, **fails
+CI**. Evidence is enforced, not encouraged.
+
+---
+
+## What it will not do
+
+These are deliberate, and they are the reason to trust the rest.
+
+- **No score, no rank, no leaderboard.** There is no API to order contributors
+  by a metric, no percentile-against-peers, no top-N query. This is absent
+  capability, not a disabled setting, so it cannot be switched on.
+- **No productivity or ROI claims.** It will not tell you an engineer is
+  performing well. It reports what was observed and what that cannot establish.
+- **No causal language.** Two things moving together is reported as two things
+  moving together.
+- **Zero is never a placeholder.** A metric with no eligible records reads
+  "Unavailable — no eligible records", never `0%`. A gap in a chart is drawn as
+  a gap, never bridged.
+- **No language-model calls in any calculation.** Analytics are deterministic:
+  the same inputs produce the same output, verifiable by digest.
+
+---
+
+## Features
+
+**Analysis**
+- 57 metrics across 8 families: delivery, velocity, quality, AI adoption,
+  people, process, working patterns, CI
+- Scopes: organization, project (a group of repositories), repository, and
+  contributor
+- Works offline with `--no-api`: history from the Git mirror, and pull-request
+  metrics reported as unavailable rather than silently zeroed
+- AI-tool detection from commit trailers for Claude Code, Copilot, Cursor,
+  Aider, Codex, Devin, Gemini CLI, and Windsurf
+- Optional import of Copilot or Cursor analytics, which turns the AI figures
+  from an inferred floor into a measurement for the period covered
+
+**Reporting**
+- A single self-contained HTML file: no server, no CDN, opens by double-click,
+  prints to PDF, works with networking disabled
+- Multi-page site mode with navigable organization, project and repository
+  scopes
+- Exports: `report.json`, per-metric CSV, per-source evidence CSV, and Markdown
+  evidence packs designed to survive being read aloud in a meeting
+
+**Privacy**
+- Contributor identity is stored only as a keyed HMAC digest. The key is never
+  written to disk, so a published artifact cannot be de-pseudonymized from
+  anything the tool leaves behind
+- Cohorts under five people are suppressed
+- 11 mechanical leak tests gate publication. If any fails, nothing is written
+
+---
+
+## Repository layout
+
+```
+specs/                    The specification. Six features, 274 requirements.
+  001-sovix-evidence/     Core product: journeys, domain, metrics, contracts
+  002-enterprise-scopes/  Organization, project, team and contributor scoping
+  003-evidence-dashboard/ The design system: tokens, chart catalog, voice
+  004-publish-pipeline/   Redaction, leak tests, publishing, installation
+  005-session-replay/     AI-agent telemetry ingestion and session replay
+  006-coaching/           Individual and leader coaching
+docs/
+  adr/                    Architecture decisions, with the reasoning
+  ARCHITECTURE.md         How the pieces fit together
+  DEVELOPING.md           Set up, run, test, contribute
+  READING-A-REPORT.md     What each number means and how to check it
+packages/renderer/        The publishing pipeline (Python, no dependencies)
+config/projects.yaml      Which repositories belong to which project
+.github/workflows/        The weekly publish job
+```
+
+---
+
+## Status, honestly
+
+**Working today**
+- Analysis and the self-contained HTML report, via `receipts`
+- The publish pipeline: pseudonymization, redaction, 11 leak tests, multi-page
+  site output, GitHub Pages deployment
+- 236 tests
+
+**Specified, not built**
+- Session replay and AI-agent telemetry ingestion (spec 005)
+- Coaching (spec 006)
+- The hosted console, access control, and scheduled reports (spec 001, M2–M3)
+- Team-level scoping (spec 002) — organization, project, repository and
+  contributor work; `team` has no implementation yet
+
+**Known limitations**
+- Pull requests are fetched newest-first to a page limit, so on a busy
+  repository the oldest can fall outside the window. Every affected metric
+  states its coverage
+- `quality.*` metrics are mostly `proxy`, and 9 of 11 `ai.*` metrics are
+  `inferred`. The report marks each one rather than presenting them as measured
+- One leak test (LT-09, raw branch names) has no data path to exercise it
+  today. It is implemented but unverified against real input
+
+---
+
+## Licence
+
+Apache-2.0. Built on [Receipts](https://github.com/Shashank2577/receipts) for
+analysis. Its evidence model, and the rule that a scope is always recomputed
+from raw records rather than averaged from its children, are the foundation
+this depends on.

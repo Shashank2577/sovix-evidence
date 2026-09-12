@@ -53,6 +53,10 @@ jobs:
           python -m pip install --quiet "git+https://github.com/Shashank2577/receipts@master"
           python -m pip install --quiet ./packages/renderer
 
+      # The cache holds bare mirror clones whose git config embeds the token
+      # used to fetch, so it is kept in RUNNER_TEMP rather than the checkout.
+      # Committing it once was caught by push protection; keeping it outside
+      # the working tree means it cannot be staged by accident.
       - name: Collect public repositories
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,7 +66,8 @@ jobs:
           set -euo pipefail
           args=""
           for r in $REPOS; do args="$args --repo $r"; done
-          receipts collect $args --since "$SINCE" --out out/ --packs
+          receipts collect $args --since "$SINCE" --config config/ --per-project \
+            --cache "$RUNNER_TEMP/receipts-cache" --out out/ --packs
           test -f out/report.json
 
       - name: Render, with the leak tests as a gate
