@@ -28,6 +28,11 @@ from .render import Provenance, render_page
 REDACTION_VERSION = "1"
 
 
+# The manifest owns its own digest formula (RedactionManifest.compute_digest).
+# Reimplementing it here would give two definitions that drift apart, and the
+# one LT-07 checks against would win silently.
+
+
 def _collection_note(report: model.Report) -> str:
     c = report.collection or {}
     bits = []
@@ -92,15 +97,24 @@ def build(
         model_calls=0,
         lines_excluded_generated=redacted.coverage.total_lines_excluded_as_generated,
     )
-    html = render_page(redacted, scope_key, prov=prov, title=title)
+    # A document cannot contain a digest of itself, so the digest covers the
+    # body rendered with an EMPTY digest field. That is the canonical form,
+    # and it is how a reader recomputes it: blank the digest, hash the rest.
+    # This is the same body-without-signature scheme AIBOM already uses.
+    canonical = render_page(redacted, scope_key, prov=prov, title=title)
+    manifest.content_digest = hashlib.sha256(canonical.encode()).hexdigest()
 
-    # The digest covers the rendered bytes, so a reader can verify that the
-    # page they hold is the page the manifest describes.
-    manifest.content_digest = hashlib.sha256(html.encode()).hexdigest()
     short = f"{manifest.content_digest[:8]}·{manifest.content_digest[8:12]}"
-    prov = Provenance(**{**prov.__dict__, "content_digest": short})
-    html = render_page(redacted, scope_key, prov=prov, title=title)
-    manifest.content_digest = hashlib.sha256(html.encode()).hexdigest()
+    html = render_page(
+        redacted,
+        scope_key,
+        prov=Provenance(**{**prov.__dict__, "content_digest": short}),
+        title=title,
+    )
+
+    # Stamp the manifest with its own digest before the gate runs, so LT-07
+    # has a recorded value to verify rather than an empty field.
+    manifest.manifest_digest = manifest.compute_digest()
 
     # 4. Gate. Every test must pass before anything is written.
     verdicts = run_all(
@@ -109,6 +123,7 @@ def build(
         pseudo=pseudo,
         report=report,  # the ORIGINAL, so LT-02 knows the real names
         current_redaction_version=REDACTION_VERSION,
+        public_repos=public_repos,
     )
     manifest.leak_tests = verdicts
     failed = {k: v for k, v in verdicts.items() if v != "pass"}

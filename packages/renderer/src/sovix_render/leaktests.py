@@ -35,16 +35,15 @@ import json
 import re
 
 from .model import Report
-from .pseudonym import HANDLE_PREFIX
+from .pseudonym import HANDLE_PREFIX, Pseudonymizer
 from .redact import RedactionManifest
-from .pseudonym import Pseudonymizer
 
 # ── LT-01 ────────────────────────────────────────────────────────────────
 _EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 
 # ── LT-03 ────────────────────────────────────────────────────────────────
 _ABS_PATH_RE = re.compile(
-    r"(?:/Users/|/home/|~/|[A-Za-z]:\\\\|\\\\\\\\[A-Za-z0-9_.\-]+\\\\)"
+    r"(?:/Users/|/home/|~/|[A-Za-z]:\\|\\\\[A-Za-z0-9_.\-]+)"
 )
 
 # ── LT-04 ────────────────────────────────────────────────────────────────
@@ -112,7 +111,7 @@ def lt_02_no_plaintext_identity(html: str, pseudo: Pseudonymizer) -> str:
             continue
         if plaintext.lower() in lowered:
             return _fail(
-                "LT-02", "known contributor plaintext identity in rendered output"
+                "known contributor plaintext identity in rendered output"
             )
     return "pass"
 

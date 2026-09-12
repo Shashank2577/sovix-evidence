@@ -250,20 +250,32 @@ def _person_identity_plaintext(scope: Scope) -> str:
     return scope.label
 
 
-def _collect_plaintexts(report: Report, pseudo: Pseudonymizer) -> None:
-    """Register every contributor identity the report contains with
-    `pseudo` *before* the main transform pass runs, purely so
-    `pseudo.known_plaintexts` is complete up front. Some metrics embed a
-    raw contributor name inside a dynamically generated string in a field
-    that is nominally "structured" (e.g. `people.top_contributor_share`'s
-    `formula`, which literally interpolates the top contributor's name).
-    Doing this pass first lets `_scrub_text` catch that kind of embed
-    wherever it surfaces, regardless of which scope or metric is
-    processed first during the real transform.
+def _collect_plaintexts(report: Report, r: _Redactor) -> None:
+    """Register every contributor identity, and every private repository
+    name, the report contains with `r.pseudo` *before* the main transform
+    pass runs, purely so `pseudo.known_plaintexts` is complete up front.
+
+    Two concrete leaks in real Receipts data make this pre-pass necessary
+    rather than optional: `people.top_contributor_share`'s `formula`
+    literally interpolates the top contributor's name into an otherwise
+    "structured" string, and `Source.ref` on a `dataset`-kind source is
+    literally the referenced scope's key (e.g. `person:person:email:
+    name@example.com` — Receipts itself double-prefixes the level).
+    Neither is reachable by field-name-based redaction alone; `_scrub_text`
+    catches both, but only if it already knows every identity by the time
+    it runs — hence collecting them up front rather than incrementally.
+
+    Only *private* repository names are registered (public ones must
+    remain visible wherever they legitimately appear, so they must never
+    be a `_scrub_text` target).
     """
     for sr in report.scopes.values():
         if sr.scope is not None and sr.scope.level == "person":
-            pseudo.handle_for(_person_identity_plaintext(sr.scope))
+            r.pseudo.handle_for(_person_identity_plaintext(sr.scope))
+        if sr.scope is not None:
+            for repo in sr.scope.repos:
+                if not r.is_public_repo(repo):
+                    r.pseudo.opaque_label("repo", repo)
         for entry in sr.facts.get("top_contributors") or []:
             name = entry.get("name") or entry.get("key")
             if name:
