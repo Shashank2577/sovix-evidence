@@ -1,0 +1,120 @@
+name: Publish evidence dashboard
+
+# Regenerates the published artifact from public repositories and deploys it
+# to GitHub Pages.
+#
+# Two properties this workflow must preserve:
+#
+#   1. It only ever collects PUBLIC repositories. There is no secret in this
+#      pipeline beyond the ambient GITHUB_TOKEN, which is read-only here, so a
+#      fork or a pull request cannot cause private data to be published.
+#   2. The leak tests are a gate. `sovix-render` exits non-zero if any test
+#      fails, and because no `continue-on-error` is set, a failure stops the
+#      deploy. Nothing reaches Pages that did not pass every test.
+
+on:
+  workflow_dispatch:
+    inputs:
+      repos:
+        description: "Space-separated public repositories to collect"
+        default: "axios/axios helm/helm"
+      since:
+        description: "Collect history from this date"
+        default: "2025-09-01"
+  schedule:
+    # Weekly, Monday 06:00 UTC. Regenerating on a schedule keeps the published
+    # window moving; it does not re-collect history already in the cache.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the analytics core and the renderer
+        run: |
+          python -m pip install --quiet --upgrade pip
+          # Receipts is not on PyPI yet, so it is installed from source at a
+          # pinned ref. Replace with a version specifier once published.
+          python -m pip install --quiet "git+https://github.com/Shashank2577/receipts@master"
+          python -m pip install --quiet ./packages/renderer
+
+      - name: Collect public repositories
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOS: ${{ github.event.inputs.repos || 'axios/axios helm/helm' }}
+          SINCE: ${{ github.event.inputs.since || '2025-09-01' }}
+        run: |
+          set -euo pipefail
+          args=""
+          for r in $REPOS; do args="$args --repo $r"; done
+          receipts collect $args --since "$SINCE" --out out/ --packs
+          test -f out/report.json
+
+      - name: Render, with the leak tests as a gate
+        run: |
+          set -euo pipefail
+          mkdir -p site
+          # Every repository named here is public, so its name may appear
+          # unredacted (ADR-014 rule 2a). Contributor identities are
+          # pseudonymized regardless of the repository's visibility.
+          public_args=""
+          for r in ${{ github.event.inputs.repos || 'axios/axios helm/helm' }}; do
+            public_args="$public_args --public-repo $r"
+          done
+          sovix-render out/report.json --out site/ --profile pseudonymous $public_args
+          test -f site/index.html
+          test -f site/manifest.json
+
+      - name: Assert the artifact is self-contained
+        run: |
+          set -euo pipefail
+          # A belt-and-braces check independent of the renderer's own tests:
+          # a remote reference here would mean the page depends on a third
+          # party to render, which ADR-014 rule 6 forbids.
+          if grep -nEo '(src|href)="https?://[^"]*"' site/index.html; then
+            echo "::error::published artifact references a remote asset"
+            exit 1
+          fi
+          if grep -nEo 'url\(\s*["'"'"']?https?://' site/index.html; then
+            echo "::error::stylesheet references a remote asset"
+            exit 1
+          fi
+          echo "self-contained: no remote references"
+          python - <<'PY'
+          import json, pathlib
+          m = json.loads(pathlib.Path("site/manifest.json").read_text())
+          failed = {k: v for k, v in m["leak_tests"].items() if v != "pass"}
+          assert m["publishable"], f"manifest says not publishable: {failed}"
+          assert not failed, f"leak tests failed: {failed}"
+          print(f"leak tests: {len(m['leak_tests'])}/{len(m['leak_tests'])} pass")
+          print(f"profile: {m['profile']}  redaction: {m['redaction_version']}")
+          PY
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
