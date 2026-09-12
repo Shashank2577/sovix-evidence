@@ -52,6 +52,10 @@ _REMOTE_SRC_HREF_RE = re.compile(
 )
 _SCRIPT_SRC_RE = re.compile(r"<script\b[^>]*\bsrc\s*=", re.IGNORECASE)
 _CSS_URL_RE = re.compile(r"""url\(\s*["']?([^"')]+)["']?\s*\)""", re.IGNORECASE)
+# A scheme is letters/digits/+/-/. followed by a colon, per RFC 3986. Matching
+# the general form rather than an http(s) denylist means a future gopher:,
+# ftp: or javascript: reference fails too, instead of passing unnoticed.
+_ABS_SCHEME_RE = re.compile(r"^[a-z][a-z0-9+.\-]*:", re.IGNORECASE)
 
 # ── LT-05 ────────────────────────────────────────────────────────────────
 _TOKEN_PREFIX_RE = re.compile(
@@ -59,6 +63,12 @@ _TOKEN_PREFIX_RE = re.compile(
 )
 _LONG_HEX_RE = re.compile(r"\b[0-9a-fA-F]{32,}\b")
 _LONG_BASE64_RE = re.compile(r"\b[A-Za-z0-9+/]{44,}={0,2}\b")
+# A git commit SHA in a github.com commit URL (`.../commit/<sha>`) is a
+# public identifier a kept evidence link legitimately carries, not a
+# secret — same 40-hex-char shape as one, though. Strip it before scanning
+# rather than exclude it by full-URL matching, since the URL's own leading
+# path segments vary per repo/owner.
+_COMMIT_URL_SHA_RE = re.compile(r"/commit/[0-9a-fA-F]{7,40}\b")
 
 # ── LT-06 ────────────────────────────────────────────────────────────────
 _JSON_BLOCK_RE = re.compile(
@@ -104,12 +114,32 @@ def lt_01_no_email(html: str) -> str:
     return "pass"
 
 
+MIN_IDENTITY_NEEDLE = 4
+
+
 def lt_02_no_plaintext_identity(html: str, pseudo: Pseudonymizer) -> str:
+    """No known contributor identity appears as a word in the output.
+
+    Matching is on token boundaries, not raw substring, and needles shorter
+    than MIN_IDENTITY_NEEDLE are skipped. Both rules exist because a bare
+    substring scan cannot tell a name from ordinary prose: a contributor
+    named "Eve" matched inside "every" and "However" on the first real run,
+    which is a false positive that would train a reviewer to ignore this
+    test.
+
+    Known limitation, stated rather than papered over: this test cannot
+    detect a three-letter given name embedded in prose. It is a backstop,
+    not the control. The control is that redaction removes identity
+    structurally in redact.py, so nothing reaches here for this test to
+    find. LT-02 exists to catch a redaction regression, and a regression
+    would surface as a full name token, not as three letters inside a word.
+    """
     lowered = html.lower()
     for plaintext in pseudo.known_plaintexts:
-        if len(plaintext) < 3:
+        needle = (plaintext or "").strip()
+        if len(needle) < MIN_IDENTITY_NEEDLE:
             continue
-        if plaintext.lower() in lowered:
+        if re.search(rf"(?<!\w){re.escape(needle.lower())}(?!\w)", lowered):
             return _fail(
                 "known contributor plaintext identity in rendered output"
             )
@@ -128,17 +158,43 @@ def lt_04_no_remote_assets(html: str) -> str:
     if _SCRIPT_SRC_RE.search(html):
         return _fail("<script src> reference in rendered output")
     for target in _CSS_URL_RE.findall(html):
-        if not target.lower().startswith("data:"):
-            return _fail("non-data: CSS url() reference in rendered output")
+        t = target.strip().lower()
+        # Three forms reach nothing off-document and are permitted:
+        #   data:          an embedded payload, e.g. a WOFF2 face
+        #   #fragment      a same-document reference, e.g. url(#p-partial),
+        #                  which is how the evidence hatch patterns are applied
+        #   relative path  no scheme and no authority
+        # Anything carrying an absolute scheme or a protocol-relative
+        # authority is a network dependency and fails.
+        if t.startswith("data:") or t.startswith("#"):
+            continue
+        if t.startswith("//") or _ABS_SCHEME_RE.match(t):
+            return _fail(
+                f"CSS url() reference with an absolute scheme "
+                f"({t.split(':', 1)[0][:12]}) in rendered output"
+            )
     return "pass"
 
 
-def lt_05_no_secret_material(html: str) -> str:
+def lt_05_no_secret_material(
+    html: str, manifest: RedactionManifest | None = None
+) -> str:
     if _TOKEN_PREFIX_RE.search(html):
         return _fail("known secret-token prefix in rendered output")
-    if _LONG_HEX_RE.search(html):
+    scan_target = _COMMIT_URL_SHA_RE.sub("/commit/", html)
+    # The artifact's own provenance digests are required to appear
+    # (FR-206) and are independently verified by LT-07; a SHA-256 digest
+    # and a would-be leaked HMAC key are the same 64-hex-char shape, so
+    # without this exclusion every publishable artifact would fail here.
+    for safe in (
+        getattr(manifest, "content_digest", "") or "",
+        getattr(manifest, "manifest_digest", "") or "",
+    ):
+        if len(safe) >= 32:
+            scan_target = scan_target.replace(safe, "")
+    if _LONG_HEX_RE.search(scan_target):
         return _fail("high-entropy hex run in rendered output")
-    if _LONG_BASE64_RE.search(html):
+    if _LONG_BASE64_RE.search(scan_target):
         return _fail("high-entropy base64 run in rendered output")
     return "pass"
 
@@ -245,7 +301,7 @@ def run_all(
         "LT-02": lt_02_no_plaintext_identity(html, pseudo),
         "LT-03": lt_03_no_absolute_path(html),
         "LT-04": lt_04_no_remote_assets(html),
-        "LT-05": lt_05_no_secret_material(html),
+        "LT-05": lt_05_no_secret_material(html, manifest),
         "LT-06": lt_06_field_keys_allowlisted(html),
         "LT-07": lt_07_manifest_integrity(manifest),
         "LT-08": lt_08_no_private_repo_identity(html, report, public_repos),

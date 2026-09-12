@@ -15,6 +15,7 @@ to publish while the key never can be.
 from __future__ import annotations
 
 import hmac
+import re
 import secrets
 from hashlib import sha256
 
@@ -39,6 +40,68 @@ def derive_key(salt_source: bytes | None = None) -> bytes:
 
 def _normalize(email: str) -> str:
     return email.strip().lower()
+
+
+_ANGLE_ADDR_RE = re.compile(r"^\s*(?P<name>[^<]*?)\s*<\s*(?P<addr>[^>]+?)\s*>\s*$")
+
+
+def _identity_components(plaintext: str) -> set[str]:
+    """Every string that could betray this identity if it were rendered.
+
+    A git identity usually arrives as `Display Name <address@host>`. A leak
+    almost never reproduces that combined form; it shows up as the display
+    name on its own, or the address on its own, or the address's local part.
+    LT-02 scans this set, so anything omitted here is something LT-02 cannot
+    catch.
+
+    Each component is returned in both its supplied and lowercase form. The
+    minimum-length guard lives in LT-02 rather than here, so this function
+    stays a faithful decomposition and the policy about what is too short to
+    match sits with the test that applies it.
+    """
+    out: set[str] = set()
+
+    def add(s: str) -> None:
+        s = s.strip().strip("\"'")
+        if s:
+            out.add(s)
+            out.add(s.lower())
+
+    raw = (plaintext or "").strip()
+    if not raw:
+        return out
+
+    m = _ANGLE_ADDR_RE.match(raw)
+    if m:
+        add(m.group("name"))
+        add(m.group("addr"))
+        addr = m.group("addr")
+    else:
+        addr = raw if "@" in raw else ""
+        if not addr:
+            add(raw)
+
+    if addr and "@" in addr:
+        add(addr)
+        local, _, _domain = addr.partition("@")
+        # A GitHub noreply address carries the account name after the numeric
+        # id: 12345+octocat@users.noreply.github.com. That trailing part is
+        # the person's handle and is exactly what a leak would show, so it is
+        # recorded.
+        if "+" in local:
+            _, _, after = local.partition("+")
+            add(after)
+        # The BARE local part is deliberately NOT recorded. A real contributor
+        # in the reference dataset uses work@<domain>, and recording "work"
+        # made LT-02 report a contributor leak against the metric label
+        # "share of work that is new capability". A generic local part
+        # discloses nobody, and a leaked address is caught in full by LT-01's
+        # email pattern, so nothing is lost by omitting it.
+        #
+        # The domain is likewise not recorded: it is shared across an
+        # organisation and would match harmlessly everywhere.
+
+    return out
 
 
 def identity_digest(email: str, key: bytes) -> str:
@@ -77,15 +140,31 @@ class Pseudonymizer:
         # detect collisions within that namespace.
         self._label_by_digest: dict[str, dict[str, str]] = {}
         self._digest_by_label: dict[str, dict[str, str]] = {}
-        # what this instance has ever pseudonymized, verbatim. Exists so a
-        # leak test (LT-02) can scan rendered output for these exact strings
-        # without needing to reverse the digest.
-        self._known_plaintexts: set[str] = set()
+        # namespace -> every plaintext and identity component this instance
+        # has pseudonymized in that namespace. Exists so a leak test can scan
+        # rendered output for these strings without reversing the digest.
+        # Kept per namespace so an identity test never scans for a repository
+        # label and call the match a contributor leak.
+        self._known_by_namespace: dict[str, set[str]] = {}
 
     def _pseudonymize(self, namespace: str, plaintext: str, prefix: str) -> str:
         normalized = _normalize(plaintext)
-        self._known_plaintexts.add(plaintext)
-        self._known_plaintexts.add(normalized)
+        # Needles are recorded PER NAMESPACE. Pooling them made LT-02, an
+        # identity test, scan strings that are not identities: a repository
+        # label or a branch name would enter the same set, and the 4-letter
+        # label "work" then matched the metric title "share of work that is
+        # new capability" and reported a contributor leak. Scoping the set
+        # keeps each test's needles semantically what that test is about.
+        seen = self._known_by_namespace.setdefault(namespace, set())
+        seen.add(plaintext)
+        seen.add(normalized)
+        # Record the identity's COMPONENTS too, not only the string as
+        # supplied. A git identity usually arrives as "Name <email>", and a
+        # leak virtually never reproduces that whole form: it surfaces as the
+        # bare display name in a table cell, or as the address on its own.
+        # Recording only the combined string made LT-02 unable to catch a
+        # planted full name, which is the exact failure it exists to prevent.
+        seen.update(_identity_components(plaintext))
 
         by_plaintext = self._digest_by_plaintext.setdefault(namespace, {})
         digest = by_plaintext.get(normalized)
@@ -148,7 +227,26 @@ class Pseudonymizer:
 
     @property
     def known_plaintexts(self) -> frozenset[str]:
-        return frozenset(self._known_plaintexts)
+        """Contributor identities only. This is LT-02's needle set.
+
+        Deliberately excludes repository and branch labels: they are
+        pseudonymized by the same machinery but they are not identities, and
+        scanning for them under an identity test produced a false contributor
+        leak. Use `known_plaintexts_in` for those.
+        """
+        return frozenset(self._known_by_namespace.get(_CONTRIBUTOR_NAMESPACE, ()))
+
+    def known_plaintexts_in(self, namespace: str) -> frozenset[str]:
+        """Needles for one namespace, e.g. "repo" or "branch"."""
+        return frozenset(self._known_by_namespace.get(namespace, ()))
+
+    @property
+    def all_known_plaintexts(self) -> frozenset[str]:
+        """Every namespace pooled. For diagnostics, not for a leak test."""
+        out: set[str] = set()
+        for v in self._known_by_namespace.values():
+            out |= v
+        return frozenset(out)
 
     def mapping_manifest(self) -> dict[str, str]:
         """Contributor digest -> handle. Never the plaintext, never the key."""

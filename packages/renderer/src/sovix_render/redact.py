@@ -279,28 +279,32 @@ def _collect_plaintexts(report: Report, r: _Redactor) -> None:
         for entry in sr.facts.get("top_contributors") or []:
             name = entry.get("name") or entry.get("key")
             if name:
-                pseudo.handle_for(name)
+                r.pseudo.handle_for(name)
         for name in (sr.facts.get("names") or ()):
-            pseudo.handle_for(name)
+            r.pseudo.handle_for(name)
         for email in (sr.facts.get("emails") or ()):
-            pseudo.handle_for(email)
+            r.pseudo.handle_for(email)
         login = sr.facts.get("github_login")
         if login:
-            pseudo.handle_for(login)
+            r.pseudo.handle_for(login)
         for m in sr.metrics:
             for key, value in (m.inputs or {}).items():
                 base = key[: -len("_name")] if key.endswith("_name") else key
                 if (key in _IDENTITY_INPUT_KEYS or base in _IDENTITY_INPUT_KEYS) and value:
-                    pseudo.handle_for(str(value))
+                    r.pseudo.handle_for(str(value))
             for src in m.sources:
                 author = (src.values or {}).get("author")
                 if author:
-                    pseudo.handle_for(author)
+                    r.pseudo.handle_for(author)
+                if not r.is_public_repo(src.repo) and src.repo:
+                    r.pseudo.opaque_label("repo", src.repo)
             for ex in m.exemplars:
                 if ex.source is not None:
                     author = (ex.source.values or {}).get("author")
                     if author:
-                        pseudo.handle_for(author)
+                        r.pseudo.handle_for(author)
+                    if not r.is_public_repo(ex.source.repo) and ex.source.repo:
+                        r.pseudo.opaque_label("repo", ex.source.repo)
 
 
 def _scrub_text(text: str, pseudo: Pseudonymizer) -> str:
@@ -446,7 +450,12 @@ def _redact_source(source: Source | None, r: _Redactor) -> Source | None:
     redacted_repo = r.redact_repo_name(source.repo)
     return Source(
         kind=source.kind,
-        ref=source.ref,
+        # `ref` is sometimes literally the referenced scope's key (e.g. a
+        # `dataset`-kind source's ref is `person:person:email:x@y`,
+        # Receipts' own double-prefixed scope key) — scrub it the same way
+        # as any other free text, rather than assume it is always a bare
+        # identifier like a PR number.
+        ref=_scrub_text(source.ref, r.pseudo),
         # `detail` is free-form narrative generated from the source record
         # (e.g. "merged after 22.2 days") and is not on the structured
         # allowlist, so it is dropped rather than kept verbatim.
@@ -609,7 +618,7 @@ def redact_report(
 
     cohort_size = len(report.contributor_scope_keys)
     r = _Redactor(profile, pseudo, public_repos, cohort_size)
-    _collect_plaintexts(report, pseudo)
+    _collect_plaintexts(report, r)
 
     new_scopes: dict[str, ScopeReport] = {}
     key_remap: dict[str, str] = {}
