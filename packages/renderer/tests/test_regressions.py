@@ -23,7 +23,7 @@ from sovix_render.model import (
     Source,
 )
 from sovix_render.pseudonym import Pseudonymizer, derive_key
-from sovix_render.redact import redact_report
+from sovix_render.redact import CONTRIBUTOR_TEXT_MARKER, redact_report
 
 
 def _sample(n: int = 1, population: int = 1) -> Sample:
@@ -127,7 +127,15 @@ def test_identity_in_a_formula_string_is_scrubbed() -> None:
     (only,) = redacted.scopes.values()
     out = only.metrics[0]
     assert "Ada Lovelace" not in out.formula, out.formula
-    assert "Contributor" in out.formula, out.formula
+    # A HANDLE must not appear here either. Substituting "Contributor DB50"
+    # into prose discloses one individual and mints a pseudonym that can be
+    # cross-referenced between pages; on a public repository the top
+    # contributor is identifiable from the contributor graph alone, so the
+    # pseudonym protects nobody. It is also a ranking of one. Free text gets a
+    # non-referenceable marker instead, and LT-10 fails the build if a handle
+    # shows up in a cohort smaller than five.
+    assert "Contributor " not in out.formula, out.formula
+    assert CONTRIBUTOR_TEXT_MARKER in out.formula, out.formula
     # The arithmetic must survive the scrub: a redacted formula still has to
     # let a reader check the division.
     assert "900" in out.formula and "1,000" in out.formula

@@ -61,6 +61,12 @@ REDACTION_VERSION = "2026-09-12.1"
 
 K_ANONYMITY_MIN = 5
 
+# Substituted for a contributor identity inside free text such as a rendered
+# formula. Deliberately not a handle: a handle in prose discloses one
+# individual and can be cross-referenced between pages, while a cohort
+# listing of at least K_ANONYMITY_MIN is where a handle belongs.
+CONTRIBUTOR_TEXT_MARKER = "a contributor"
+
 # ── Field classes, per the Redaction Rules table ────────────────────────────
 CLASS_CONTRIBUTOR_IDENTITY = "contributor_identity"
 CLASS_REPOSITORY_NAME = "repository_name"
@@ -231,8 +237,29 @@ class _Redactor:
         not necessary."""
         replacements: dict[str, str] = {}
         for plaintext in self.pseudo.known_plaintexts:
-            replacements[plaintext] = self.pseudo.handle_for(plaintext)
+            # Free text gets a NON-REFERENCEABLE marker, not a handle.
+            #
+            # A handle is the right rendering inside a cohort listing of at
+            # least K_ANONYMITY_MIN people, where it distinguishes rows
+            # without naming anyone. Substituted into prose it does the
+            # opposite: the top-contributor formula becomes "lines from
+            # Contributor DB50 / total = 91.7%", which is a per-contributor
+            # disclosure of exactly one person. On a public repository that
+            # re-identifies them immediately, because anyone can open the
+            # contributor graph and see who wrote the most. It is also a
+            # ranking of one, which ADR-013 forbids having a primitive for.
+            #
+            # A constant marker removes the identity without minting a
+            # pseudonym that can be cross-referenced between pages, and the
+            # arithmetic around it still reads.
+            replacements[plaintext] = CONTRIBUTOR_TEXT_MARKER
+            # Registering the handle anyway keeps the digest/handle mapping
+            # complete for the manifest, even though it is not substituted
+            # into prose.
+            self.pseudo.handle_for(plaintext)
         for plaintext in self.pseudo.known_plaintexts_in("repo"):
+            # A repository is not a person, so an opaque label is fine here:
+            # there is no individual to re-identify.
             replacements[plaintext] = self.pseudo.opaque_label("repo", plaintext)
         needles = sorted(
             {p for p in replacements if len(p) >= 3}, key=len, reverse=True

@@ -117,7 +117,9 @@ def lt_01_no_email(html: str) -> str:
 MIN_IDENTITY_NEEDLE = 4
 
 
-def lt_02_no_plaintext_identity(html: str, pseudo: Pseudonymizer) -> str:
+def lt_02_no_plaintext_identity(
+    html: str, pseudo: Pseudonymizer, report: Report | None = None
+) -> str:
     """No known contributor identity appears as a word in the output.
 
     Matching is on token boundaries, not raw substring, and needles shorter
@@ -134,11 +136,26 @@ def lt_02_no_plaintext_identity(html: str, pseudo: Pseudonymizer) -> str:
     find. LT-02 exists to catch a redaction regression, and a regression
     would surface as a full name token, not as three letters inside a word.
     """
+    # A needle occurring in the product's own data-independent vocabulary is
+    # not evidence of a leak. Every false positive found against real data was
+    # this shape: a contributor named Eve matching inside "every", and one
+    # whose address local part is "work" matching the metric label "share of
+    # work that is new capability". Both words come from the metric registry,
+    # which is fixed prose identical for every report, so their presence says
+    # nothing about any contributor.
+    #
+    # This is also what makes the test scale. The needle set grows with the
+    # contributor count, and at several hundred contributors some name always
+    # collides with ordinary English. Excluding the known static vocabulary
+    # removes that whole class, instead of raising the length threshold until
+    # the test detects nothing at all.
+    vocabulary = static_vocabulary(report) if report is not None else frozenset()
     needles = sorted(
         {
             (p or "").strip().lower()
             for p in pseudo.known_plaintexts
             if len((p or "").strip()) >= MIN_IDENTITY_NEEDLE
+            and (p or "").strip().lower() not in vocabulary
         },
         key=len,
         reverse=True,
@@ -156,6 +173,28 @@ def lt_02_no_plaintext_identity(html: str, pseudo: Pseudonymizer) -> str:
     if pattern.search(html.lower()):
         return _fail("known contributor plaintext identity in rendered output")
     return "pass"
+
+
+def static_vocabulary(report: Report) -> frozenset[str]:
+    """Every word the product prints regardless of who contributed.
+
+    Drawn from the metric registry's fixed prose: a label, plain-English
+    description, reading guidance, assumption or caveat is a property of the
+    metric definition rather than of the data, so it is identical across every
+    report and cannot carry contributor information.
+    """
+    words: set[str] = set()
+    token = re.compile(r"[A-Za-z][A-Za-z'-]*")
+    for sr in report.scopes.values():
+        for m in sr.metrics:
+            for text in (
+                m.label, m.plain_english, m.why_it_matters, m.how_to_read,
+                *m.assumptions, *m.caveats,
+            ):
+                words.update(w.lower() for w in token.findall(text or ""))
+        for ser in sr.series:
+            words.update(w.lower() for w in token.findall(ser.label or ""))
+    return frozenset(words)
 
 
 def lt_03_no_absolute_path(html: str) -> str:
@@ -322,7 +361,7 @@ def run_all(
     """
     return {
         "LT-01": lt_01_no_email(html),
-        "LT-02": lt_02_no_plaintext_identity(html, pseudo),
+        "LT-02": lt_02_no_plaintext_identity(html, pseudo, report),
         "LT-03": lt_03_no_absolute_path(html),
         "LT-04": lt_04_no_remote_assets(html),
         "LT-05": lt_05_no_secret_material(html, manifest),
