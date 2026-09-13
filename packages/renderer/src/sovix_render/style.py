@@ -156,6 +156,75 @@ figcaption{{font-size:14px;color:var(--ink-2);margin-top:10px;
   max-width:{T.MAX_MEASURE_CH}ch}}
 .chartblk{{margin-top:{T.SPACE[4]}px}}
 
+/* ── section ledes ────────────────────────────────────────────────────── */
+.lede{{{t("body")};color:var(--ink-2);margin:{T.SPACE[1]}px 0 0;
+  max-width:{T.MAX_MEASURE_CH}ch}}
+
+/* ── metric feature blocks: the tile and its inline evidence ──────────── */
+.mgrid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:{T.SPACE[4]}px;margin-top:{T.SPACE[4]}px}}
+@media(max-width:767px){{.mgrid{{grid-template-columns:1fr}}}}
+/* A grid item's default min-width:auto lets a fixed-width chart inflate its
+   column past the viewport; min-width:0 keeps the track honest and the
+   chart's max-width:100% then scales it down instead. */
+.mgrid>*{{min-width:0}}
+.mblock{{background:var(--surface);border:1px solid var(--hairline);
+  border-radius:{T.RADIUS[2]}px;padding:{T.SPACE[4]}px;display:flex;
+  flex-direction:column;gap:{T.SPACE[2]}px}}
+@media(max-width:767px){{.mblock{{padding:{T.CARD_PADDING_NARROW}px}}}}
+.mhead{{display:flex;justify-content:space-between;align-items:flex-start;
+  gap:{T.SPACE[2]}px}}
+.mhead h3{{{t("title")};margin:0}}
+.mdef{{{t("meta")};color:var(--ink-2);margin:{T.SPACE[0]}px 0 0;max-width:62ch}}
+.mqual{{{t("meta")};color:var(--ink-3);margin:0}}
+section svg{{max-width:100%;height:auto}}
+
+/* ── the inline evidence body, per spec 003 section 5.7 ───────────────── */
+details.evd{{margin-top:auto;border-top:1px solid var(--hairline);
+  padding-top:{T.SPACE[2]}px}}
+details.evd>summary{{{t("label")};color:var(--accent);cursor:pointer}}
+details.evd>summary:hover{{color:var(--accent-active)}}
+.evbody{{margin-top:{T.SPACE[2]}px;display:flex;flex-direction:column;
+  gap:{T.SPACE[1]}px}}
+.evlabel{{{t("label")};color:var(--ink-3);margin:{T.SPACE[2]}px 0 0}}
+.evbody p.t-body{{margin:0}}
+.formula{{{t("mono")};background:var(--recessed);color:var(--ink);
+  padding:{T.SPACE[2]}px;margin:0;overflow-x:auto;white-space:pre-wrap}}
+table.kv{{width:auto;max-width:100%}}
+table.kv th{{{t("meta")};color:var(--ink-3);font-weight:400;text-align:left;
+  white-space:normal}}
+table.kv td{{text-align:left;{t("data")};white-space:normal}}
+.srcnote{{{t("meta")};color:var(--ink-3)}}
+
+/* ── exemplars (F10) ──────────────────────────────────────────────────── */
+.exemplar{{border-left:2px solid var(--hairline);
+  padding:{T.SPACE[1]}px {T.SPACE[3]}px;margin:{T.SPACE[1]}px 0}}
+.exemplar .exhead{{{t("heading")};margin:{T.SPACE[0]}px 0}}
+.exemplar .exweight{{{t("data")};margin:0}}
+.exemplar p{{margin:{T.SPACE[0]}px 0 0}}
+
+/* ── the ledger: every remaining metric as a disclosure row ───────────── */
+.ledger{{margin-top:{T.SPACE[3]}px}}
+details.lrow{{margin-top:0;border-top:none;border-bottom:1px solid var(--hairline);
+  padding:{T.SPACE[2]}px 0}}
+details.lrow:first-of-type{{border-top:1px solid var(--hairline)}}
+details.lrow>summary{{display:grid;
+  grid-template-columns:minmax(180px,1fr) auto auto;gap:{T.SPACE[3]}px;
+  align-items:baseline;{t("body")};color:var(--ink);text-transform:none;
+  letter-spacing:0}}
+details.lrow>summary .li{{{t("mono")};color:var(--ink-3)}}
+details.lrow>summary .lv{{{t("data")};text-align:right;white-space:nowrap}}
+details.lrow>summary .lt{{{t("label")};color:var(--ink-3);text-align:right}}
+@media(max-width:600px){{details.lrow>summary{{grid-template-columns:1fr auto}}
+  details.lrow>summary .li{{display:none}}}}
+details.lrow .evbody{{padding:{T.SPACE[2]}px 0 {T.SPACE[1]}px}}
+.ledgerfam{{{t("label")};color:var(--ink-3);margin:{T.SPACE[4]}px 0 {T.SPACE[1]}px}}
+
+/* ── comparison small multiples ───────────────────────────────────────── */
+.cmpfig{{margin:{T.SPACE[4]}px 0 0}}
+.cmpfig h3{{{t("title")};margin:0 0 {T.SPACE[1]}px}}
+.cmpfig .cnote{{{t("meta")};color:var(--ink-3);margin:{T.SPACE[0]}px 0 0}}
+
 /* ── findings ─────────────────────────────────────────────────────────── */
 .findings{{margin-top:{T.SPACE[4]}px}}
 .finding{{display:grid;grid-template-columns:96px 1fr;gap:{T.SPACE[4]}px;
@@ -165,7 +234,13 @@ figcaption{{font-size:14px;color:var(--ink-2);margin-top:10px;
 .finding p{{margin:0;font-size:15px;color:var(--ink-2);max-width:68ch}}
 .finding .sev{{{t("label")};color:var(--ink-3);padding-top:6px}}
 .rule-cite{{{t("mono")};color:var(--ink-3);margin-top:8px;display:block}}
+.finding .fval{{{t("data-xl")};margin:{T.SPACE[0]}px 0}}
 @media(max-width:600px){{.finding{{grid-template-columns:1fr;gap:6px}}}}
+.findlist{{list-style:none;margin:{T.SPACE[3]}px 0 0;padding:0}}
+.findlist li{{padding:{T.SPACE[1]}px 0;border-bottom:1px solid var(--hairline);
+  {t("meta")};color:var(--ink-2)}}
+.findcaption{{{t("meta")};color:var(--ink-3);margin-top:{T.SPACE[2]}px;
+  max-width:{T.MAX_MEASURE_CH}ch}}
 
 /* ── footer / provenance ──────────────────────────────────────────────── */
 .foot{{margin-top:{T.SPACE[6]}px;padding-top:{T.SPACE[4]}px;

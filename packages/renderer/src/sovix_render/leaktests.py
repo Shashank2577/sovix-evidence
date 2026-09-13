@@ -47,8 +47,23 @@ _ABS_PATH_RE = re.compile(
 )
 
 # ── LT-04 ────────────────────────────────────────────────────────────────
-_REMOTE_SRC_HREF_RE = re.compile(
-    r"""(?:src|href)\s*=\s*["']https?://""", re.IGNORECASE
+# An ASSET is something the page loads to render itself; a HYPERLINK is
+# somewhere the reader may choose to go. ADR-014 rule 6 forbids the former
+# ("no remote scripts, styles, fonts or data") and says nothing about the
+# latter, because a link does not affect whether the page renders offline.
+#
+# The distinction is load-bearing rather than pedantic: the product's whole
+# purpose is that a number cites its source records, and those live at
+# github.com. An earlier version of this pattern matched `href` too, which
+# would have rejected any report that actually linked to its own evidence —
+# failing the build for doing the one thing the product is for. It never
+# surfaced only because the renderer had not yet emitted source links.
+#
+# `src` on any element, and `href` on a <link> (a stylesheet, preload or
+# icon), are loads. `href` on an <a> is not.
+_REMOTE_SRC_RE = re.compile(r"""\bsrc\s*=\s*["']https?://""", re.IGNORECASE)
+_REMOTE_LINK_EL_RE = re.compile(
+    r"""<link\b[^>]*\bhref\s*=\s*["']https?://""", re.IGNORECASE
 )
 _SCRIPT_SRC_RE = re.compile(r"<script\b[^>]*\bsrc\s*=", re.IGNORECASE)
 _CSS_URL_RE = re.compile(r"""url\(\s*["']?([^"')]+)["']?\s*\)""", re.IGNORECASE)
@@ -204,8 +219,10 @@ def lt_03_no_absolute_path(html: str) -> str:
 
 
 def lt_04_no_remote_assets(html: str) -> str:
-    if _REMOTE_SRC_HREF_RE.search(html):
-        return _fail("remote http(s) src/href reference in rendered output")
+    if _REMOTE_SRC_RE.search(html):
+        return _fail("remote src= asset reference in rendered output")
+    if _REMOTE_LINK_EL_RE.search(html):
+        return _fail("remote <link> stylesheet or asset in rendered output")
     if _SCRIPT_SRC_RE.search(html):
         return _fail("<script src> reference in rendered output")
     for target in _CSS_URL_RE.findall(html):

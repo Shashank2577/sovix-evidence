@@ -36,6 +36,9 @@ __all__ = [
     "proportion_bar",
     "distribution_strip",
     "completeness_meter",
+    "category_bar",
+    "comparison_row",
+    "share_strip",
     "composition_bar",
     "unavailable_block",
     "evidence_chip",
@@ -580,8 +583,8 @@ def proportion_bar(*, numerator: float, denominator: float,
     fill_w = max(min(track_w * pct / 100.0, track_w), 0.0)
 
     parts = [
-        _text(0, 20, esc(value_text), "data-xl", fill=T.INK),
-        _text(width, 20, esc(nd_text), "data", fill=T.INK_2, anchor="end"),
+        _text(0, 24, esc(value_text), "data-xl", fill=T.INK),
+        _text(width, 24, esc(nd_text), "data", fill=T.INK_2, anchor="end"),
         # Remainder is blank surface: "not in numerator" carries no colour.
         f'<rect x="0" y="{_n(track_y)}" width="{_n(track_w)}" '
         f'height="{_n(track_h)}" fill="{_fill("surface")}" '
@@ -623,16 +626,27 @@ def proportion_bar(*, numerator: float, denominator: float,
 
 def distribution_strip(*, p50: float | None, p90: float | None, n: int,
                        unit: str, axis_max: float | None = None,
-                       width: int = 420) -> str:
+                       width: int = 420,
+                       population_unit: str | None = None,
+                       p50_only_note: str | None = None) -> str:
     """F4 distribution strip (spec 4.5).
 
     The population size always prints: a median without its population is
     forbidden. When only p50 is known the median tick renders alone with the
     summary-only caption, because inventing a band would draw values that were
     never observed.
+
+    ``population_unit`` names what was counted ("merged pull requests"); it
+    defaults to ``unit`` for callers that predate the distinction between the
+    value's unit and the population's noun.
     """
-    height = 84
-    pop_text = f"n = {_val(n)} {unit or 'records'}"
+    # Vertical layout, one concern per row so real-world values cannot
+    # collide: value/population (24) · axis extents (44) · the strip
+    # (50..66) · percentile labels (84) · the p50-only caption row (98).
+    pop_noun = population_unit or unit or "records"
+    pop_text = f"n = {_val(n)} {pop_noun}"
+    p50_note = p50_only_note or SUMMARY_ONLY
+    height = 100 if p90 is None else 88
 
     if p50 is None:
         aria = (
@@ -648,14 +662,18 @@ def distribution_strip(*, p50: float | None, p90: float | None, n: int,
         max(p50, p90) if p90 is not None else p50
     )
     hi = max(float(hi), 1e-9)
-    strip_y, strip_h = 34.0, 16.0
+    strip_y, strip_h = 50.0, 16.0
+    label_y = strip_y + strip_h + 18
 
     def sx(v: float) -> float:
         return max(min(v / hi, 1.0), 0.0) * width
 
     parts = [
-        _text(0, 20, esc(_val(p50, unit)), "data-xl", fill=T.INK),
-        _text(width, 20, esc(pop_text), "data", fill=T.INK_2, anchor="end"),
+        _text(0, 24, esc(_val(p50, unit)), "data-xl", fill=T.INK),
+        _text(width, 24, esc(pop_text), "data", fill=T.INK_2, anchor="end"),
+        _text(0, 44, esc(_val(0, unit)), "meta", fill=T.INK_3),
+        _text(width, 44, esc(_val(hi, unit)), "meta", fill=T.INK_3,
+              anchor="end"),
         f'<line x1="0" y1="{_n(strip_y + strip_h / 2)}" x2="{_n(width)}" '
         f'y2="{_n(strip_y + strip_h / 2)}" stroke="{_fill("hairline")}" '
         'stroke-width="1"/>',
@@ -673,37 +691,35 @@ def distribution_strip(*, p50: float | None, p90: float | None, n: int,
         f'x2="{_n(sx(p50))}" y2="{_n(strip_y + strip_h + 4)}" '
         f'stroke="{_fill("ink")}" stroke-width="2"/>'
     )
+    # A middle-anchored label at either extreme would clip against the
+    # edge; clamp its anchor into the canvas.
+    p50_label_x = max(min(sx(p50), width - 36.0), 36.0)
     parts.append(
-        _text(sx(p50), strip_y + strip_h + 18, esc(f"p50 {_val(p50, unit)}"),
+        _text(p50_label_x, label_y, esc(f"p50 {_val(p50, unit)}"),
               "meta", fill=T.INK, anchor="middle")
     )
     if p90 is not None:
         parts.append(
-            _text(width, strip_y + strip_h + 18,
+            _text(width, label_y,
                   esc(f"p90 {_val(p90, unit)}"), "meta", fill=T.INK_3,
                   anchor="end")
         )
-    parts.append(_text(0, strip_y - 6, esc(_val(0, unit)), "meta", fill=T.INK_3))
-    parts.append(
-        _text(width, strip_y - 6, esc(_val(hi, unit)), "meta", fill=T.INK_3,
-              anchor="end")
-    )
     if p90 is None:
         parts.append(
-            _text(0, height - 2, esc(SUMMARY_ONLY), "meta", fill=T.INK_2)
+            _text(0, height - 2, esc(p50_note), "meta", fill=T.INK_2)
         )
 
     if p90 is None:
         aria = (
             f"Distribution strip: median {_val(p50, unit)} across "
-            f"{_val(n)} {unit or 'records'}. Only the median is known, so no "
-            f"band is drawn: {SUMMARY_ONLY}. Horizontal axis "
+            f"{_val(n)} {pop_noun}. Only the median is known, so no "
+            f"band is drawn: {p50_note}. Horizontal axis "
             f"{_val(0, unit)} to {_val(hi, unit)}."
         )
     else:
         aria = (
             f"Distribution strip: median {_val(p50, unit)}, band to p90 "
-            f"{_val(p90, unit)}, across {_val(n)} {unit or 'records'}. "
+            f"{_val(p90, unit)}, across {_val(n)} {pop_noun}. "
             f"Horizontal axis {_val(0, unit)} to {_val(hi, unit)}. "
             "Position encodes the value; no percentile below p50 is shown."
         )
@@ -753,8 +769,8 @@ def completeness_meter(*, n: int, population: int,
     fill_w = max(fill_w, 0.0)
 
     parts = [
-        _text(0, 20, esc(pct_text), "data-xl", fill=T.INK),
-        _text(width, 20, esc(nd_text), "data", fill=T.INK_2, anchor="end"),
+        _text(0, 24, esc(pct_text), "data-xl", fill=T.INK),
+        _text(width, 24, esc(nd_text), "data", fill=T.INK_2, anchor="end"),
         f'<rect x="0" y="{_n(track_y)}" width="{_n(track_w)}" '
         f'height="{_n(track_h)}" fill="{_fill("surface")}" '
         f'stroke="{_fill("hairline")}" stroke-width="1"/>',
@@ -774,6 +790,216 @@ def completeness_meter(*, n: int, population: int,
         f"read; the remaining track is unread population, not a target and "
         f"not a failure. {caption}."
     )
+    return _open(width, height, aria) + "".join(parts) + "</svg>"
+
+
+# ── F5 category bar ─────────────────────────────────────────────────────────
+
+def category_bar(*, rows: list[tuple[str, float | None, str]],
+                 unit: str = "", tier: str = T.Kind.MEASURED,
+                 width: int = 560) -> str:
+    """F5 category bar (spec 4.6): one total broken across named categories.
+
+    ``rows`` is ``(label, value, note)`` in the caller's declared order,
+    which is preserved exactly: this function offers no sort, because
+    value-ordering is the primitive that must not exist when categories are
+    people, and a declared order costs nothing when they are not. A ``None``
+    value renders the stated absence in the value slot with no bar; a
+    zero-length bar is reserved for an observed zero. More than nine
+    categories collapse into an explicit "other" row rather than being
+    silently dropped.
+    """
+    shown = list(rows)
+    if len(shown) > 9:
+        tail = shown[8:]
+        known = [v for _l, v, _n in tail if v is not None]
+        shown = shown[:8] + [(
+            f"other ({len(tail)} categories)",
+            sum(known) if known else None,
+            "" if known else "no observed amount in any collapsed category",
+        )]
+
+    label_w, row_h, top = 170.0, 26.0, 6.0
+    height = top + row_h * max(len(shown), 1) + 22.0
+    values = [v for _l, v, _n in shown if v is not None]
+
+    if not shown or not values:
+        aria = (
+            f"Category bar: {UNAVAILABLE_NO_RECORDS}. "
+            f"{len(shown)} categories declared, none with an observed value."
+        )
+        return _unavailable_svg(
+            width, height, reason="no category has an observed value",
+            aria=aria,
+        )
+
+    hi = _nice_max(max(values), unit)
+    bar_area = max(width - label_w - 110.0, 40.0)
+
+    parts: list[str] = []
+    described: list[str] = []
+    for i, (label, value, note) in enumerate(shown):
+        y = top + row_h * i
+        cy = y + row_h / 2
+        parts.append(_text(0, cy + 4, esc(str(label)), "meta", fill=T.INK_2))
+        if value is None:
+            absent = f"{T.EN_DASH} unavailable"
+            if note:
+                absent += f" {T.EN_DASH} {note}"
+            parts.append(
+                _text(label_w, cy + 4, esc(absent), "meta", fill=T.INK_3)
+            )
+            described.append(f"{label}: unavailable ({note or 'no reason given'})")
+            continue
+        v = max(float(value), 0.0)
+        w = bar_area * (v / hi if hi else 0.0)
+        if w > 0:
+            parts.append(
+                f'<rect x="{_n(label_w)}" y="{_n(cy - 8)}" width="{_n(w)}" '
+                f'height="16" fill="{_kind_fill(tier)}" '
+                f'stroke="{_fill("data-1")}" stroke-width="1"/>'
+            )
+        # Value prints at the bar's end, never inside it (spec 4.6).
+        val_text = _val(v, unit)
+        parts.append(
+            _text(label_w + w + 8, cy + 4, esc(val_text), "data", fill=T.INK)
+        )
+        if note:
+            parts.append(
+                _text(width, cy + 4, esc(note), "meta", fill=T.INK_3,
+                      anchor="end")
+            )
+        described.append(f"{label}: {val_text} {unit}".rstrip())
+
+    parts.append(
+        _text(label_w, height - 4, esc(_val(0, unit)), "meta", fill=T.INK_3)
+    )
+    parts.append(
+        _text(label_w + bar_area, height - 4, esc(_val(hi, unit)), "meta",
+              fill=T.INK_3, anchor="end")
+    )
+
+    aria = (
+        f"Category bar across {len(shown)} categories in declared order, "
+        f"shared axis {_val(0, unit)} to {_val(hi, unit)} {unit}. "
+        f"{'; '.join(described)}."
+    )
+    return _open(width, height, aria) + "".join(parts) + "</svg>"
+
+
+# ── F8 comparison small multiples ───────────────────────────────────────────
+
+def comparison_row(*, label: str, unit: str, tier: str,
+                   panels: list[tuple[str, float | None, str]],
+                   is_floor: bool = False, width: int = 640) -> str:
+    """F8 comparison as small multiples on one shared scale (spec 4.9).
+
+    ``panels`` is ``(cohort label, value, n text)`` in the caller's declared
+    order. Every panel shares the one axis computed over all observed
+    values, each panel prints its own n, and a cohort with no eligible
+    records states that in words with no plotted position. No arrow, no
+    delta styling, no improvement language: the reader is given the same
+    mark at the same scale and nothing else.
+    """
+    label_w, n_w, row_h, top = 170.0, 132.0, 26.0, 8.0
+    height = top + row_h * max(len(panels), 1) + 22.0
+    values = [v for _l, v, _n in panels if v is not None]
+
+    if not panels or not values:
+        aria = (
+            f"Comparison of {label}: {UNAVAILABLE_NO_RECORDS} in any of "
+            f"{len(panels)} cohorts."
+        )
+        return _unavailable_svg(
+            width, height,
+            reason=f"no cohort has eligible records for {label}",
+            aria=aria,
+        )
+
+    hi = 100.0 if unit == "percent" else _nice_max(max(values), unit)
+    bar_area = max(width - label_w - n_w - 90.0, 40.0)
+    prefix = "≥ " if is_floor else ""
+
+    parts: list[str] = []
+    described: list[str] = []
+    for i, (plabel, value, n_text) in enumerate(panels):
+        y = top + row_h * i
+        cy = y + row_h / 2
+        parts.append(_text(0, cy + 4, esc(str(plabel)), "meta", fill=T.INK_2))
+        if n_text:
+            parts.append(
+                _text(width, cy + 4, esc(n_text), "meta", fill=T.INK_3,
+                      anchor="end")
+            )
+        if value is None:
+            parts.append(
+                _text(label_w, cy + 4, esc(UNAVAILABLE_NO_RECORDS), "meta",
+                      fill=T.INK_3)
+            )
+            described.append(f"{plabel}: unavailable")
+            continue
+        v = max(float(value), 0.0)
+        w = bar_area * min(v / hi, 1.0) if hi else 0.0
+        if w > 0:
+            parts.append(
+                f'<rect x="{_n(label_w)}" y="{_n(cy - 5)}" width="{_n(w)}" '
+                f'height="10" fill="{_kind_fill(tier)}" '
+                f'stroke="{_fill("data-1")}" stroke-width="1"/>'
+            )
+        val_text = f"{prefix}{_val(v, unit)}"
+        parts.append(
+            _text(label_w + w + 8, cy + 4, esc(val_text), "data", fill=T.INK)
+        )
+        described.append(
+            f"{plabel}: {val_text} {unit}".rstrip()
+            + (f", {n_text}" if n_text else "")
+        )
+
+    parts.append(
+        _text(label_w, height - 4, esc(_val(0, unit)), "meta", fill=T.INK_3)
+    )
+    parts.append(
+        _text(label_w + bar_area, height - 4, esc(_val(hi, unit)), "meta",
+              fill=T.INK_3, anchor="end")
+    )
+
+    aria = (
+        f"Small multiples comparing {label} across {len(panels)} cohorts in "
+        f"declared order, one shared axis {_val(0, unit)} to "
+        f"{_val(hi, unit)} {unit}. {'; '.join(described)}."
+    )
+    if is_floor:
+        aria += " Every value is a detectable floor; the true share may be higher."
+    return _open(width, height, aria) + "".join(parts) + "</svg>"
+
+
+# ── F10 share strip (micro) ─────────────────────────────────────────────────
+
+def share_strip(*, pct: float, width: int = 280) -> str:
+    """The exemplar's share-of-total strip (spec 4.11): an F3 micro on a
+    6px track, with the share printed beside it. The remainder is blank
+    surface, because "the rest of the total" is not a category.
+    """
+    height = 18
+    track_w, track_y, track_h = 140.0, 6.0, 6.0
+    p = max(min(float(pct), 100.0), 0.0)
+    fill_w = track_w * p / 100.0
+    text = f"{p:.1f}% of total"
+
+    parts = [
+        f'<rect x="0" y="{_n(track_y)}" width="{_n(track_w)}" '
+        f'height="{_n(track_h)}" fill="{_fill("surface")}" '
+        f'stroke="{_fill("hairline")}" stroke-width="1"/>',
+    ]
+    if fill_w > 0:
+        parts.append(
+            f'<rect x="0" y="{_n(track_y)}" width="{_n(fill_w)}" '
+            f'height="{_n(track_h)}" fill="{_fill("data-1")}"/>'
+        )
+    parts.append(_text(track_w + 8, track_y + track_h + 2, esc(text), "meta",
+                       fill=T.INK_2))
+
+    aria = f"Share strip: {text}. Length encodes the share; the remainder is the rest of the stated total."
     return _open(width, height, aria) + "".join(parts) + "</svg>"
 
 
@@ -806,8 +1032,8 @@ def composition_bar(*, segments: list[tuple[str, float, str]],
         )
 
     parts = [
-        _text(0, 20, esc(total_label), "data-xl", fill=T.INK),
-        _text(width, 20, esc(caption), "meta", fill=T.INK_2, anchor="end"),
+        _text(0, 24, esc(total_label), "data-xl", fill=T.INK),
+        _text(width, 24, esc(caption), "meta", fill=T.INK_2, anchor="end"),
     ]
 
     x = 0.0
