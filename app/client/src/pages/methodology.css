@@ -1,0 +1,508 @@
+/**
+ * Methodology (SPEC §5.11, §7) — chunk C12.
+ *
+ * One column at a 720px measure, because this screen is read rather than scanned:
+ * every section is prose or a definition table, and a wider measure would make the
+ * limits and the governance note harder to read, not easier.
+ *
+ * Two tables live here (exclusion reasons, the rulebook) and both must hold at
+ * 390px without sideways scroll. They do it by giving the reason/gloss column all
+ * the slack and keeping the figures in a narrow mono column — a reason wraps, a
+ * count does not.
+ */
+
+.mt-measure {
+  max-width: 720px;
+  margin-top: 26px;
+}
+
+.mt-section {
+  padding-top: 30px;
+  border-top: 1px solid var(--border-soft);
+  margin-top: 30px;
+}
+
+.mt-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+  margin-top: 0;
+}
+
+.mt-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+
+.mt-section-index {
+  color: var(--accent);
+  font: 700 10px "DM Mono", monospace;
+  letter-spacing: 0.06em;
+}
+
+.mt-section-head h2 {
+  margin: 0;
+  color: var(--text);
+  font: 600 22px/1.15 "Fraunces", Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+.mt-subheading {
+  margin: 26px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mt-lede {
+  margin: 13px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.mt-caption,
+.mt-total,
+.mt-ruleset {
+  margin: 12px 0 0;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.mt-ruleset {
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mt-total {
+  color: var(--text-2);
+  font-family: "DM Mono", monospace;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------------ stat rows */
+
+.mt-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.mt-stat {
+  padding: 12px 12px 11px;
+  background: var(--surface-2);
+  border-radius: 7px;
+}
+
+.mt-stat strong {
+  display: block;
+  color: var(--text);
+  font: 700 18px/1 "DM Mono", monospace;
+  letter-spacing: -0.04em;
+}
+
+.mt-stat small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-3);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+/*
+  The one figure on this screen that carries an argument rather than a fact about
+  the run, so it gets the tinted card and the standing line rather than a tile in
+  the grid above (§5.11.1).
+*/
+.mt-llm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 22px;
+  margin-top: 12px;
+  padding: 17px 19px 16px;
+  background: var(--surface-tint);
+  border: 1px solid var(--accent-border-hover);
+  border-radius: 9px;
+}
+
+.mt-llm-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.mt-llm-figure strong {
+  color: var(--accent-ink);
+  font: 700 34px/1 "DM Mono", monospace;
+  letter-spacing: -0.06em;
+}
+
+.mt-llm-figure span {
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mt-llm-standing {
+  flex: 1 1 220px;
+  margin: 0;
+  color: var(--accent-ink);
+  font: italic 13px/1.45 "Fraunces", Georgia, serif;
+}
+
+.mt-llm-cost {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-3);
+  font: 10px "DM Mono", monospace;
+}
+
+/* ---------------------------------------------------------- the legends */
+
+.mt-legend {
+  display: grid;
+  gap: 2px;
+  margin: 13px 0 0;
+}
+
+.mt-legend-row {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 2px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.mt-legend-row:first-child {
+  border-top: 0;
+}
+
+.mt-legend-row dt {
+  min-width: 0;
+}
+
+.mt-legend-row dd {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.mt-confidence-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  color: var(--text-2);
+  font: 700 10px "DM Mono", monospace;
+  letter-spacing: 0.03em;
+  background: var(--surface-3);
+  border-radius: 20px;
+}
+
+/* --------------------------------------------------- structural limits */
+
+.mt-limits {
+  display: grid;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.mt-limit {
+  padding: 15px 16px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+
+.mt-limit h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mt-limit p {
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+/* ------------------------------------------------------------- tables */
+
+.mt-table {
+  width: 100%;
+  margin-top: 15px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.mt-table th,
+.mt-table td {
+  padding: 9px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--border-soft);
+}
+
+.mt-table thead th {
+  padding-top: 0;
+  color: var(--text-3);
+  border-top: 0;
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.mt-table td {
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.mt-table--reasons th:nth-child(2),
+.mt-table--reasons th:nth-child(3),
+.mt-table--reasons td:nth-child(2),
+.mt-table--reasons td:nth-child(3) {
+  width: 76px;
+  text-align: right;
+}
+
+/*
+  `table-layout: fixed` takes its widths from the first row, which is the head —
+  so the column widths are set there. Without this the three columns split evenly
+  and a two-digit threshold gets a third of the measure to itself.
+*/
+.mt-table--rules thead th:nth-child(1) {
+  width: 190px;
+}
+
+.mt-table--rules thead th:nth-child(2) {
+  width: 72px;
+  text-align: right;
+}
+
+.mt-table--rules th[scope="row"] {
+  width: 190px;
+}
+
+.mt-table--rules th[scope="row"] code {
+  color: var(--accent-ink);
+  font: 10px "DM Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
+.mt-table--rules td:nth-child(2) {
+  width: 72px;
+  text-align: right;
+}
+
+.mt-figure {
+  color: var(--text-2);
+  font: 700 10px "DM Mono", monospace;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.mt-unit {
+  display: none;
+}
+
+.mt-disclosure {
+  margin-top: 6px;
+}
+
+.mt-paths {
+  display: grid;
+  gap: 0;
+  margin: 13px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mt-paths li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.mt-paths code {
+  min-width: 0;
+  color: var(--text-2);
+  font: 10px "DM Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
+.mt-paths span {
+  color: var(--text-2);
+  font: 700 10px "DM Mono", monospace;
+  white-space: nowrap;
+}
+
+.mt-merges {
+  display: grid;
+  gap: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mt-merges li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.mt-merges li:first-child {
+  border-top: 0;
+}
+
+.mt-merges strong {
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mt-merges span {
+  color: var(--text-3);
+  font: 10px "DM Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------- governance */
+
+.mt-quote {
+  margin: 15px 0 0;
+  padding: 19px 18px 16px 20px;
+}
+
+.mt-quote p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.mt-stance {
+  margin-top: 14px;
+  padding: 15px 16px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 9px 9px 0;
+}
+
+.mt-stance strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mt-stance p {
+  margin: 7px 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+/* ------------------------------------------------------ coverage notes */
+
+.mt-notes {
+  margin-top: 4px;
+}
+
+.mt-note p {
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------- reflow */
+
+@media (max-width: 780px) {
+  .mt-legend-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .mt-llm-figure strong {
+    font-size: 30px;
+  }
+}
+
+@media (max-width: 510px) {
+  .mt-section-head h2 {
+    font-size: 20px;
+  }
+
+  .mt-table--rules thead th:nth-child(1),
+  .mt-table--rules th[scope="row"] {
+    width: 124px;
+  }
+
+  /*
+    §7.4's answer for a table too wide to keep its columns: it stops being a
+    table. Three columns at 390px leaves 58px for a seven-digit line count, which
+    clips the figure — so the reason takes the full measure and its two counts sit
+    beneath it, each carrying its own noun now that the column head is gone.
+  */
+  .mt-table--reasons,
+  .mt-table--reasons tbody,
+  .mt-table--reasons tr,
+  .mt-table--reasons td {
+    display: block;
+    width: auto;
+  }
+
+  .mt-table--reasons thead {
+    display: none;
+  }
+
+  .mt-table--reasons tr {
+    padding: 11px 2px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .mt-table--reasons td {
+    padding: 0;
+    border-top: 0;
+  }
+
+  .mt-table--reasons td:nth-child(2),
+  .mt-table--reasons td:nth-child(3) {
+    display: inline-block;
+    margin-top: 6px;
+    text-align: left;
+  }
+
+  .mt-table--reasons td:nth-child(2) {
+    margin-right: 14px;
+  }
+
+  .mt-table--reasons .mt-unit {
+    display: inline;
+    color: var(--text-3);
+    font-weight: 500;
+  }
+
+  .mt-table th,
+  .mt-table td {
+    padding: 9px 4px;
+  }
+
+  .mt-paths li,
+  .mt-merges li {
+    flex-wrap: wrap;
+  }
+}

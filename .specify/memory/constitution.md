@@ -8,7 +8,19 @@ views as bounded exceptions to k<5 suppression, to forbid any contributor-rankin
 architecturally, and to separate published artifacts from exports. No principle removed. Minor
 version because the amendment adds a constraint (no ranking primitive) and bounded exceptions
 rather than reversing a governing rule. Affected: spec.md FR-016/FR-017, data-model.md entity
-catalog and Export row, ux-spec.md people views. Those documents are updated in specs 002-006. -->
+catalog and Export row, ux-spec.md people views. Those documents are updated in specs 002-006.
+
+1.1.0 -> 2.0.0 (2026-09-25). Principles III and VII amended per ADR-016. Session content
+(prompts, responses, tool arguments and results) may now be stored in the platform database for
+session replay and coaching, secret-redacted and hard-deleted within 30 days, and is readable by
+the developer, owner, admin and analysts whose grant covers the session's project. The exclusion
+of raw-content capture from initial delivery is removed. Coaching may call a language model,
+outside the calculation path, with cited and labelled output. Major version because the amendment
+reverses a governing rule. A fourth exception to k<5 suppression is added for one-developer
+session and coaching reads. Affected: spec 001 US4 and FR-016, plan.md constraints, security.md,
+data-model.md, spec 002 FR-093/FR-094/FR-096, spec 005 (tiers removed), spec 006 (content and
+model coaching), spec 003 person view, ADR-013 rules 4 and 6 and its access matrix, ADR-015
+(superseded). -->
 
 # Sovix Evidence Constitution
 
@@ -31,15 +43,21 @@ file touches MUST be labelled a proxy. Benchmarks MUST disclose cohort selection
 
 ### III. Privacy is part of the domain
 Local analysis MUST function without telemetry or a hosted account. Team/project reporting
-is the default. Contributor plaintext identities, raw prompts and tool payloads MUST be absent
-from the platform database and from standard exports; keyed pseudonymous handles are permitted
-and are the only contributor representation that may persist or be published (ADR-011).
+is the default. Contributor plaintext identities MUST be absent from the platform database and
+from standard exports; keyed pseudonymous handles are permitted and are the only contributor
+representation that may persist or be published (ADR-011). Session content (prompts, responses,
+tool arguments and results) MAY be stored in the platform database for session replay and
+coaching only; it MUST be secret-redacted before storage, hard-deleted no later than 30 days
+after the session ends, readable only by the developer, owner, admin and analysts whose grant
+covers the session's project, sent to no one but the workspace's configured coaching model
+provider, and MUST NOT enter any metric, export, snapshot, event, log, audit payload, published
+artifact or search index readable by another principal (ADR-016).
 Cohorts smaller than five distinct humans MUST be suppressed in hosted people breakdowns,
-except in a subject's view of their own data, in local mode, and in an audited named-person
-operational view that a workspace has separately enabled (ADR-013). Ranking contributors
+except in a subject's view of their own data, in local mode, in an audited named-person
+operational view that a workspace has separately enabled (ADR-013), and in an owner's, admin's or
+granted analyst's read of one developer's sessions or coaching (ADR-016). Ranking contributors
 against one another MUST NOT be implementable: no ordering, percentile-rank or top-N
-contributor primitive may exist in any interface. Raw-content capture is excluded from initial
-delivery; a future change requires a separately versioned policy. Public discovery, published
+contributor primitive may exist in any interface. Public discovery, published
 artifacts and private engineering datasets MUST have separate storage, credentials and
 publication paths, and publication MUST be an explicit audited act over pseudonymous or
 aggregate data only (ADR-014).
@@ -69,8 +87,10 @@ validator passing is not evidence that the future application works.
 ### VII. Prefer a modular product over distributed complexity
 One monorepo and a modular backend with independently runnable workers are the initial
 architecture. Extract a service only after measured scale, isolation or ownership needs
-justify it. Deterministic analytics MUST make zero model calls. Optional AI narrative and
-public-repo enrichment MUST sit outside the calculation path and cite existing facts.
+justify it. Deterministic analytics MUST make zero model calls. Coaching, optional AI narrative
+and public-repo enrichment MUST sit outside the calculation path and cite existing facts;
+coaching MAY call a language model over session content, and its output MUST cite the sessions
+it rests on, be labelled model-generated, and never produce or alter a metric value (ADR-016).
 
 ## Product and Security Constraints
 
@@ -103,4 +123,4 @@ new principles increment the minor version; clarifications increment patch. Each
 records compliance with every principle and explains any justified exception. There are
 no approved exceptions at initial ratification.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12
+**Version**: 2.0.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-25

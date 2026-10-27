@@ -875,11 +875,15 @@ Section tier summaries (§3.7) attach at the family group level.
   - No percentile-vs-peers, no team-relative positioning, no rank of any kind (ADR-013
     rule 1). The subject's own history is the only comparison axis: every card's delta
     compares the subject to the subject's prior window.
-  - Coaching output renders only in the self view (ADR-013 rule 6).
+  - Coaching output renders in the self view, and in an owner's, admin's or granted analyst's
+    read of one developer's coaching (ADR-013 rule 6 as amended by ADR-016). A lead's read shows
+    coaching only, never the self-view metric cards, which remain a flag-gated named-person view.
+    It is never shown for two developers at once.
 - **Self view hierarchy**: identity-link status ("verified via {method}") → work summary
   cards (commits, PRs, sessions, tokens — F1) → durations (F4) → cost cards (F6/F1) →
-  "who viewed my data" audit panel listing named-person queries about them (ADR-013
-  rule 4), reverse-chronological, with actor, window and timestamp.
+  "who viewed my data" audit panel listing named-person metric queries about them (ADR-013
+  rule 4), reverse-chronological, with actor, window and timestamp. Session-content and
+  coaching reads are not listed (ADR-016 rule 4).
 - **Named-person operational view additionally**: a persistent, non-dismissable banner
   above the header: "Named-person view. This access is audited and visible to
   {handle}." in `type-meta` on `--surface-recessed`. Every render writes the audit event

@@ -1,0 +1,335 @@
+/**
+ * Repositories (SPEC §5.6, §7.4, §7.6).
+ *
+ * The row is a grid, not a `<table>`, so the same markup can drop columns at 780
+ * and become a card at 510 without a second implementation. The column template
+ * is declared once per breakpoint and the cells that are gone are removed from
+ * the flow, never squashed.
+ */
+
+.rp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 28px;
+}
+.rp-toolbar__note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: 10px;
+}
+.rp-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 9px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.rp-reset:hover {
+  color: var(--accent-ink);
+  border-color: var(--accent-border-hover);
+}
+.rp-reset:active {
+  transform: scale(0.97);
+}
+
+/* ----------------------------------------------------------------- table */
+
+.rp-table {
+  margin-top: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+
+.rp-row {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.7fr) minmax(120px, 1fr) minmax(84px, 0.7fr)
+    minmax(74px, 0.6fr) minmax(62px, 0.5fr) minmax(120px, 0.9fr);
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.rp-row--head {
+  min-height: 34px;
+  border-top: 0;
+  color: var(--text-3);
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rp-row--body {
+  position: relative;
+  min-height: 52px;
+  transition: background 0.16s ease;
+}
+.rp-row--body:hover,
+.rp-row--body:focus-within {
+  background: var(--surface-hover);
+}
+
+.rp-cell {
+  min-width: 0;
+}
+
+/* The project subhead at org level. A row with one cell, so the grid template
+   does not apply to it (§5.6's grouped order). */
+.rp-row--subhead {
+  display: block;
+  min-height: 30px;
+  padding-top: 13px;
+  padding-bottom: 5px;
+}
+.rp-subhead {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  color: var(--text-2);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rp-subhead span {
+  color: var(--text-3);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* ------------------------------------------------------------ sort header */
+
+.rp-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  transition: color 0.18s ease;
+}
+.rp-sort:hover,
+.rp-sort[data-active="true"] {
+  color: var(--accent-ink);
+}
+.rp-sort__glyph {
+  color: var(--ornament);
+  font-size: 10px;
+}
+.rp-sort[data-active="true"] .rp-sort__glyph {
+  color: var(--accent);
+}
+
+/* -------------------------------------------------------------- row link */
+
+/**
+ * One link per row, stretched across it. Everything interactive that comes
+ * after it — the status pill's "Why?" disclosure — sits above it on the z axis,
+ * so a reader can open the footnote without being navigated away (§5.6).
+ */
+.rp-rowlink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+}
+.rp-row--body .rp-rowlink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.rp-row--body .rp-cell--status,
+.rp-card__head .status-pill-group {
+  position: relative;
+  z-index: 1;
+}
+.rp-rowlink:focus-visible {
+  outline: none;
+}
+.rp-rowlink:focus-visible::after {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.rp-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.rp-name strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-name small {
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-figure {
+  color: var(--text-2);
+  font: 700 10px "DM Mono", monospace;
+}
+
+/* Words, in the body face, so it cannot be read as a figure (§6.4). */
+.rp-missing {
+  color: var(--text-3);
+  font: italic 10px "DM Sans", sans-serif;
+}
+
+/* ----------------------------------------------------------------- cards */
+
+.rp-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.rp-card {
+  position: relative;
+  padding: 15px 15px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+.rp-card:active {
+  border-color: var(--accent-border-hover);
+}
+.rp-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rp-card__head .rp-rowlink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+}
+.rp-card__head .rp-name strong {
+  font-size: 13px;
+}
+.rp-card__head .rp-name small {
+  font-size: 11px;
+}
+
+.rp-card__coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+}
+.rp-card__label {
+  color: var(--text-3);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* §7.5: the bar is full width at every size and the value never sits inside it. */
+.rp-card__coverage .coverage-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rp-card__coverage .coverage-cell__bar {
+  flex: 1;
+  width: auto !important;
+}
+
+.rp-card__facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+  margin: 15px 0 0;
+  padding-top: 13px;
+  border-top: 1px solid var(--border-soft);
+}
+.rp-card__facts dt {
+  color: var(--text-3);
+  font-size: 11px;
+}
+.rp-card__facts dd {
+  margin: 5px 0 0;
+}
+
+.rp-empty {
+  margin-top: 22px;
+}
+
+/* ------------------------------------------------------------ responsive */
+
+/* §7.1 compact: the grid holds, the gutters tighten. */
+@media (max-width: 1080px) {
+  .rp-row {
+    padding: 0 13px;
+  }
+  /* Six fixed minimums summed past the 473px content well at 781 and still
+     overflowed at 900, so this was the worst of the three Compact-band gaps.
+     The minimums relax and Open PRs leaves the grid rather than being squeezed:
+     it is the least load-bearing of the six and is on every repository's own
+     overview. Status keeps a real width because a truncated pill is a pill that
+     cannot be read. */
+  .rp-row {
+    grid-template-columns:
+      minmax(0, 1.7fr) minmax(96px, 1fr) minmax(72px, 0.7fr)
+      minmax(62px, 0.5fr) minmax(96px, 0.9fr);
+    gap: 8px;
+  }
+  .rp-cell--open,
+  .rp-col--open {
+    display: none;
+  }
+}
+
+/* §7.4: at ≤780 the table keeps Repository · Review coverage · Status.
+   The other three columns are removed from the grid, not narrowed — each one
+   is still on the repository's own overview, one tap away. */
+@media (max-width: 780px) {
+  .rp-row {
+    grid-template-columns: minmax(0, 1.6fr) minmax(96px, 1fr) minmax(104px, 0.9fr);
+  }
+  .rp-cell--lead,
+  .rp-cell--contributors,
+  .rp-cell--prs {
+    display: none;
+  }
+  .rp-row--body {
+    min-height: 60px;
+  }
+  .rp-name strong {
+    font-size: 12px;
+  }
+  .rp-name small {
+    font-size: 10px;
+  }
+}

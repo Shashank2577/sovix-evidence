@@ -154,8 +154,8 @@ reconciliation before any terminal transition and never authorizes a new mutatio
 
 `POST /v1/traces` is OTLP/HTTP trace intake, not a JSON REST job. It accepts the pinned
 OpenTelemetry `ExportTraceServiceRequest` as `application/x-protobuf` or OTLP JSON as
-`application/json`, authenticates the collector token, repeats the metadata allowlist and
-returns `ExportTraceServiceResponse`. The 8 MiB limit is measured after supported decompression;
+`application/json`, authenticates the collector token, repeats the attribute allowlist and secret
+redaction, and returns `ExportTraceServiceResponse`. The 8 MiB limit is measured after supported decompression;
 the 10,000-span and daily workspace limits apply atomically before acceptance.
 
 Envelope/authentication/size/quota failures reject the whole request with the protocol status
@@ -169,6 +169,33 @@ not accepted through alternate REST shapes.
 deduplicates the delivery, then returns 202. It returns 503 if durability cannot be established
 so failure is visible to delivery reconciliation. Do not assume GitHub automatically retries every failed webhook; the connector must support explicit redelivery/backfill. Unknown event actions can be safely acknowledged and ignored after a
 valid signature; they never become arbitrary source records.
+
+## Session Content
+
+`GET /v1/workspaces/{workspace_id}/sessions/{session_id}/content` returns one session's
+secret-redacted content (ADR-016) in span order. Besides owner, admin and an analyst whose grant
+contains the session's project, the developer whose linked contributor identity produced the
+session may read it at any internal role; the session routes carry `x-self-access` because a viewer
+reaches only their own sessions. Another person's session for an internal viewer, and
+every session for an `is_external` principal, return the same 404 as a nonexistent session.
+Access does not depend on `individual_attribution_enabled`. Each request writes exactly one
+`AuditEvent` with actor, subject handle, the session ID returned (or none) and time, readable by owner and admin only, containing no content, and never shown or
+sent to the subject; if that write fails, the read fails. Empty and denied requests are audited
+too; `resource_id` is the requested resource and `returned_ids` lists what was returned. `SpanContent.span_id` is the platform
+`Span.id` UUID, not the 16-hex OTLP wire span ID. Every page
+carries `content_state`, `content_missing_reason` and `content_expired_at`, so partial, missing or
+expired content is stated rather than returned as a bare empty list. The same readers may filter
+`GET .../sessions` by `contributor_id` and see `contributor_handle`. Without `contributor_id` the
+list holds only the caller's own sessions; another developer's sessions require `contributor_id`,
+one developer per request (`x-one-developer-per-request`). Alternatively `unattributed=true`
+lists sessions with no linked developer; they carry no handle, so this is metadata only, not a
+view of a person, and is not audited, though content reads on them are. Combining it with
+`contributor_id` is a 400. No parameter orders sessions by a metric. No route lists content across sessions or exports it, and content never appears in
+a Job result, event payload, manifest or export.
+
+`PUT .../retention` rejects `spans_days` not greater than `session_content_days` with 422, so
+session metadata always outlives its content; both clocks start at session end. A shorter content
+period applies to stored content.
 
 ## Contract Acceptance
 

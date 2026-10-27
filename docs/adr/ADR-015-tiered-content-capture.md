@@ -1,6 +1,9 @@
 # ADR-015: Tiered content capture for session replay
 
-**Status**: Accepted for specification | **Date**: 2026-09-12 | **Qualifies**: Constitution III
+**Status**: Superseded by [ADR-016](ADR-016-session-content-and-model-coaching.md) on 2026-09-25 | **Date**: 2026-09-12 | **Qualifies**: Constitution III
+
+> Superseded. Content is now captured by default with a 30-day limit, with no tiers, opt-out or
+> contributor notice, and coaching reads it with a model. Kept for the reasoning it records.
 
 ## Context
 

@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sovix — fastapi/fastapi · Direction 02: Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   DIRECTION 02 — LEDGER
+   Light-first editorial forensics. The product is an audit document
+   with a team behind it: a serif voice, exhibits with seals, and
+   apparatus set in mono. Interactive, but with paper manners.
+   ================================================================ */
+:root{
+  --paper:#FBF9F4;
+  --paper-2:#F4F1E9;
+  --ink:#1B1813;
+  --ink-2:#3D3830;
+  --muted:#6E675B;
+  --faint:#9A927F;
+  --rule:#DCD6C7;
+  --rule-dark:#B8AF9B;
+  --seal:#A61E24;
+  --seal-dim:#F7E8E6;
+  --link:#1E4B85;
+  --link-dim:#E8EEF6;
+  --serif:'Newsreader',Georgia,'Times New Roman',serif;
+  --sans:'Inter',ui-sans-serif,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --dur:260ms;
+  --ease:cubic-bezier(.25,.6,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--link);text-decoration:none;background-image:linear-gradient(var(--link),var(--link));background-size:0% 1px;background-position:0 100%;background-repeat:no-repeat;transition:background-size var(--dur) var(--ease)}
+a:hover{background-size:100% 1px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--link);outline-offset:3px}
+.num{font-variant-numeric:tabular-nums lining-nums}
+
+/* ---------- running header ---------- */
+.running{
+  position:sticky;top:0;z-index:40;
+  background:rgba(251,249,244,.94);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--rule);
+  transition:box-shadow var(--dur) var(--ease);
+}
+.running.scrolled{box-shadow:0 1px 0 var(--rule-dark)}
+.running .in{
+  max-width:820px;margin:0 auto;padding:10px 24px;
+  display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+}
+.running .mark{font-family:var(--serif);font-weight:600;font-size:17px;letter-spacing:.01em}
+.running .mark i{font-style:italic;color:var(--seal)}
+.running nav{display:flex;gap:6px;align-items:baseline;font-size:13px;color:var(--muted)}
+.running nav a{color:var(--muted)}
+.running nav .here{color:var(--ink);font-weight:600}
+.running .ed{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--faint)}
+@media(max-width:640px){.running .ed{display:none}}
+
+/* ---------- document ---------- */
+.doc{max-width:820px;margin:0 auto;padding:52px 24px 120px}
+
+.reveal{opacity:0;transform:translateY(10px);animation:rise .6s var(--ease) forwards}
+.reveal.d1{animation-delay:.06s}.reveal.d2{animation-delay:.16s}
+.reveal.d3{animation-delay:.26s}.reveal.d4{animation-delay:.36s}
+.reveal.d5{animation-delay:.46s}
+@keyframes rise{to{opacity:1;transform:none}}
+
+/* title block */
+.titleblock{border-bottom:3px double var(--rule-dark);padding-bottom:28px;margin-bottom:14px}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+h1{font-family:var(--serif);font-size:44px;line-height:1.08;font-weight:500;letter-spacing:-.01em}
+h1 .repo{font-style:italic}
+.standfirst{font-family:var(--serif);font-size:19px;font-style:italic;color:var(--ink-2);margin-top:14px;max-width:56ch}
+.provline{
+  display:flex;flex-wrap:wrap;gap:4px 26px;margin-top:22px;
+  font-family:var(--mono);font-size:11.5px;color:var(--muted);
+}
+.provline b{color:var(--ink);font-weight:500}
+.provline .warn{color:var(--seal)}
+
+/* section heads */
+section{margin-top:56px}
+.sec-no{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--faint);text-transform:uppercase}
+h2.q{font-family:var(--serif);font-size:28px;font-weight:500;line-height:1.15;margin:6px 0 22px}
+
+/* ---------- exhibit (finding) ---------- */
+.exhibit{
+  position:relative;
+  border:1px solid var(--rule-dark);
+  background:linear-gradient(180deg,#FDFCF9,var(--paper));
+  padding:30px 34px 26px;margin-top:34px;
+  box-shadow:0 1px 0 var(--rule);
+  transition:box-shadow var(--dur) var(--ease),transform var(--dur) var(--ease);
+}
+.exhibit:hover{box-shadow:0 6px 24px -12px rgba(27,24,19,.25);transform:translateY(-1px)}
+.exhibit::before{content:"";position:absolute;inset:5px;border:1px solid var(--rule);pointer-events:none}
+.exhibit .stamp{
+  position:absolute;top:-13px;left:26px;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--seal);background:var(--paper);border:1.5px solid var(--seal);
+  padding:4px 14px;transform:rotate(-1.2deg);
+}
+.exhibit h3{font-family:var(--serif);font-size:26px;font-weight:500;line-height:1.15;margin-bottom:10px}
+.exhibit .lede{color:var(--ink-2);max-width:62ch}
+.exhibit .lede .v{font-family:var(--serif);font-weight:600;color:var(--seal)}
+.exhibit .ruleline{
+  margin-top:18px;padding-top:14px;border-top:1px solid var(--rule);
+  display:flex;flex-wrap:wrap;gap:4px 26px;
+  font-family:var(--mono);font-size:11.5px;color:var(--muted);
+}
+.exhibit .ruleline b{color:var(--ink);font-weight:500}
+.exhibit .action{margin-top:14px;font-size:14px;color:var(--ink-2)}
+.exhibit .action b{font-weight:600;color:var(--ink)}
+
+/* ---------- statement ---------- */
+.stmt{border-top:1px solid var(--rule-dark);padding:26px 0 22px}
+.stmt + .stmt{margin-top:2px}
+.stmt .label{font-size:14px;font-weight:600;letter-spacing:.01em;color:var(--ink-2)}
+.stmt .valrow{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap;margin-top:2px}
+.stmt .value{
+  font-family:var(--serif);font-size:64px;line-height:1;font-weight:500;
+  letter-spacing:-.02em;font-variant-numeric:lining-nums;
+}
+.stmt.crit .value{color:var(--seal)}
+.stmt .value small{font-size:28px;color:var(--muted);font-weight:400}
+.cite{
+  font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);
+}
+.cite .g{color:var(--ink)}
+.plain{font-family:var(--serif);font-size:17.5px;line-height:1.55;color:var(--ink-2);max-width:58ch;margin-top:12px}
+.ctxline{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:10px}
+
+/* working */
+.wbtn{
+  display:inline-flex;align-items:center;gap:8px;margin-top:14px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--link);
+  border-bottom:1px solid transparent;padding:2px 0;
+  transition:border-color var(--dur) var(--ease);
+}
+.wbtn:hover{border-bottom-color:var(--link)}
+.wbtn .chev{transition:transform var(--dur) var(--ease);font-size:10px}
+.wbtn[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.working{display:grid;grid-template-rows:0fr;overflow:hidden;transition:grid-template-rows .45s var(--ease)}
+.working.open{grid-template-rows:1fr}
+.working>div{min-height:0;overflow:hidden}
+.working .inner{
+  margin-top:18px;border-left:2px solid var(--rule-dark);padding:6px 0 6px 26px;
+  opacity:0;transform:translateY(-4px);
+  transition:opacity .4s var(--ease) .12s,transform .4s var(--ease) .12s;
+}
+.working.open .inner{opacity:1;transform:none}
+.wpart{padding:12px 0;border-bottom:1px dotted var(--rule-dark)}
+.wpart:last-child{border-bottom:0}
+.wpart .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.deriv{
+  font-family:var(--mono);font-size:13.5px;color:var(--ink);
+  background:var(--paper-2);border:1px solid var(--rule);
+  padding:12px 16px;overflow-x:auto;white-space:nowrap;
+}
+.deriv .op{color:var(--faint)}
+.deriv .res{color:var(--seal);font-weight:500}
+.wpart p{font-size:14px;color:var(--ink-2);max-width:60ch}
+.wpart p+p{margin-top:8px}
+.footcap{font-size:12px;color:var(--faint);margin-top:6px;font-style:italic;font-family:var(--serif)}
+
+/* ledger bar — engraved */
+.lbar{display:flex;height:20px;border:1px solid var(--ink);overflow:hidden}
+.lseg{min-width:2px}
+.lseg.counted{background:var(--ink)}
+.lseg.uncounted{background:repeating-linear-gradient(135deg,transparent 0 4px,rgba(27,24,19,.45) 4px 6px)}
+.lseg.excluded{background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(27,24,19,.22) 5px 7px)}
+.lkey{display:flex;flex-wrap:wrap;gap:4px 22px;margin-top:9px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.lkey b{color:var(--ink);font-weight:500}
+.lkey .sw{display:inline-block;width:10px;height:10px;border:1px solid var(--ink);vertical-align:-1px;margin-right:7px}
+
+/* exemplar as deposition */
+.depo{border:1px solid var(--rule);background:#FDFCF9;padding:14px 18px}
+.depo+.depo{margin-top:10px}
+.depo .head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;font-size:13.5px}
+.depo .head .rk{font-family:var(--mono);font-size:11px;color:var(--seal)}
+.depo .head .w{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.depo .why{font-family:var(--serif);font-style:italic;font-size:14.5px;color:var(--ink-2);margin-top:6px;max-width:58ch}
+
+/* records */
+.records{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+.records th{font-weight:500;text-align:left;color:var(--faint);letter-spacing:.14em;text-transform:uppercase;font-size:9.5px;padding:6px 10px;border-bottom:1px solid var(--ink)}
+.records td{padding:6px 10px;border-bottom:1px solid var(--rule);color:var(--ink-2);white-space:nowrap}
+.records tr{transition:background var(--dur) var(--ease)}
+.records tbody tr:hover{background:var(--paper-2)}
+.records .r{text-align:right}
+.rec-wrap{overflow-x:auto}
+.rec-more{font-family:var(--mono);font-size:11px;color:var(--faint);padding-top:8px}
+
+/* pull-quote button */
+.pullq{
+  font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--muted);
+  border:1px solid var(--rule-dark);padding:5px 14px;border-radius:99px;
+  transition:color var(--dur) var(--ease),border-color var(--dur) var(--ease),background var(--dur) var(--ease);
+}
+.pullq:hover{color:var(--seal);border-color:var(--seal);background:var(--seal-dim)}
+.pullq.done{color:var(--seal);border-color:var(--seal)}
+
+/* figures */
+figure{margin:34px 0 8px;border:1px solid var(--rule-dark);padding:26px 28px 20px;background:#FDFCF9}
+figcaption{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin-bottom:20px}
+figcaption .fig{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--seal)}
+figcaption .t{font-family:var(--serif);font-size:17px;font-weight:500}
+figcaption .m{font-family:var(--mono);font-size:11px;color:var(--faint);width:100%}
+
+/* dot strip */
+.strip{position:relative;height:66px;margin:0 6px}
+.strip .axis{position:absolute;left:0;right:0;top:40px;border-top:1px solid var(--ink)}
+.strip .tick{position:absolute;top:37px;width:1px;height:7px;background:var(--ink)}
+.strip .ticklab{position:absolute;top:48px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:var(--muted)}
+.sdot{position:absolute;top:40px;width:11px;height:11px;border-radius:50%;transform:translate(-50%,-50%);background:var(--paper);border:1.6px solid var(--ink);transition:transform var(--dur) var(--ease)}
+.sdot.focal{background:var(--seal);border-color:var(--seal);width:13px;height:13px}
+.sdot:hover,.sdot.hl{transform:translate(-50%,-50%) scale(1.4)}
+.slab{position:absolute;transform:translateX(-50%);top:8px;font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.slab b{color:var(--ink);font-weight:500}
+.slab.focal b{color:var(--seal)}
+.striptable{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;margin-top:14px}
+.striptable td{padding:5px 8px;border-top:1px dotted var(--rule-dark);color:var(--muted)}
+.striptable td.r{text-align:right;color:var(--ink);font-weight:500}
+.striptable tr.focal td:first-child{color:var(--seal)}
+.striptable tr{transition:background var(--dur) var(--ease)}
+.striptable tr:hover,.striptable tr.hl{background:var(--paper-2)}
+
+/* dumbbell */
+.db-row{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center;padding:8px 0;border-bottom:1px dotted var(--rule-dark);transition:background var(--dur) var(--ease)}
+.db-row:hover,.db-row.hl{background:var(--paper-2)}
+.db-row .name{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-align:right}
+.db-row.focal .name{color:var(--seal);font-weight:500}
+.db-track{position:relative;height:28px}
+.db-line{position:absolute;top:13px;height:1.6px;background:var(--ink)}
+.db-row.focal .db-line{background:var(--seal)}
+.db-dot{position:absolute;top:14px;width:9px;height:9px;border-radius:50%;transform:translate(-50%,-50%);background:var(--ink)}
+.db-dot.p90{background:var(--paper);border:1.6px solid var(--ink)}
+.db-row.focal .db-dot{background:var(--seal)}
+.db-row.focal .db-dot.p90{background:var(--paper);border-color:var(--seal)}
+.db-val{position:absolute;top:-2px;font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.db-axis{position:relative;height:26px;margin-top:4px}
+.db-axis .tick{position:absolute;top:0;width:1px;height:6px;background:var(--ink)}
+.db-axis .ticklab{position:absolute;top:9px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+.fig-note{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--muted);margin-top:14px;max-width:60ch}
+
+/* colophon */
+.colophon{
+  margin-top:72px;border-top:3px double var(--rule-dark);padding-top:20px;
+  font-family:var(--mono);font-size:11px;color:var(--faint);
+  display:flex;flex-wrap:wrap;gap:6px 28px;
+}
+.colophon a{color:var(--muted)}
+
+@media(max-width:640px){
+  h1{font-size:32px}
+  .stmt .value{font-size:46px}
+  .db-row{grid-template-columns:86px 1fr}
+  .db-row .name{font-size:10px}
+  figure{padding:18px 14px 14px}
+  .exhibit{padding:24px 18px 20px}
+  .working .inner{padding-left:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  html{scroll-behavior:auto}
+  .reveal{opacity:1;transform:none;animation:none}
+}
+
+/* ── narrow-viewport corrections ──────────────────────────────────────────
+   Two offenders, found by measuring every element against the viewport at
+   360px with every disclosure open, rather than by eye.
+
+   .deriv is the restated equation. It is one long unbreakable line by
+   nature ("5.0 h = median( first_review_at - created_at ) over 90 ..."), so
+   it must scroll inside its own container instead of widening the document.
+
+   .slab is a dot-strip end label, absolutely positioned at the mark it
+   names. At the right-hand end of the scale that puts it past the edge, so
+   its translation is clamped to keep it inside the plot.
+   ---------------------------------------------------------------------- */
+@media (max-width: 620px){
+  .deriv{overflow-x:auto; -webkit-overflow-scrolling:touch}
+  .slab{max-width:44vw; white-space:normal; text-align:center; line-height:1.25}
+  .slab:last-of-type{transform:translateX(-78%)}
+
+  /* A grid or flex item defaults to min-width:auto, so a 1fr track grows to
+     its content's min-content width -- and .deriv's content is one nowrap
+     line. The track therefore ignored the scroll container inside it and
+     widened the document instead. This is the fix that actually matters;
+     overflow-x on the scroller alone cannot work without it. */
+  .wrow, .wrow > *, .stmt, .stmt > *, .bodyrow, .bodyrow > *,
+  .db-row, .db-row > *{min-width:0}
+}
+</style>
+</head>
+<body>
+
+<div class="running" id="running">
+  <div class="in">
+    <span class="mark">Sovix<i>.</i></span>
+    <nav aria-label="Scope">
+      <a href="#">All repositories</a><span>·</span>
+      <a href="#">Python</a><span>·</span>
+      <span class="here">fastapi/fastapi</span>
+    </nav>
+    <span class="ed num">Edition 2026-09-13 · snapshot, not live</span>
+  </div>
+</div>
+
+<main class="doc">
+  <header class="titleblock reveal d1">
+    <p class="kicker">Engineering evidence · Repository chapter</p>
+    <h1>The state of <span class="repo">fastapi/fastapi</span></h1>
+    <p class="standfirst">Seven hundred and fifty-nine commits by eighty-six people over
+    fifty-one weeks — and one critical question about who is watching the door.</p>
+    <div class="provline num">
+      <span>snapshot <b>2026-09-13 07:06 UTC</b></span>
+      <span><b>6</b> repositories collected · <b>0</b> failed</span>
+      <span>span <b>2025-09-05 → 2026-08-26</b> (50.8 weeks)</span>
+      <span class="warn">PR collection truncated: read 200 of 6,323, newest first</span>
+    </div>
+  </header>
+
+  <article class="exhibit reveal d2" aria-labelledby="exa">
+    <span class="stamp">Exhibit A · Critical</span>
+    <h3 id="exa">Most changes reach production without a review</h3>
+    <p class="lede">Of the changes that went into the product through a pull request, how
+    many had at least one colleague formally look at them and record an opinion. Here it
+    is <span class="v num">7.8%</span>. The strongest single piece of evidence:
+    <a href="https://github.com/fastapi/fastapi/pull/16210" target="_blank" rel="noopener">#16210</a>,
+    1,936 lines merged with no review.</p>
+    <div class="ruleline num">
+      <span>fired rule <b>process.review_coverage &lt; 50</b></span>
+      <span>ruleset <b>rccef86aa</b></span>
+      <span>scope <b>repo:fastapi/fastapi</b></span>
+    </div>
+    <p class="action"><b>Recommended action</b> — turn on branch protection requiring one
+    approving review. This is a settings change, not a process programme.</p>
+  </article>
+
+  <!-- ============ §1 THE DOOR ============ -->
+  <section class="reveal d3">
+    <p class="sec-no">§ 1 · Process</p>
+    <h2 class="q">Is anything guarding the door?</h2>
+
+    <div class="stmt crit">
+      <p class="label">Share of merged changes with a recorded review</p>
+      <div class="valrow">
+        <span class="value num">7.8<small>%</small></span>
+        <span class="cite"><span class="g">●</span> measured · high confidence · <span class="num">90 of 200 pull requests (45%)</span></span>
+      </div>
+      <p class="plain">Of the changes that went into the product through a pull request,
+      how many had at least one colleague formally look at them and record an opinion.</p>
+      <p class="ctxline num">Across the portfolio this runs 7.8–99.3% over 6 repositories. This is the minimum.</p>
+      <button class="wbtn" aria-expanded="false" aria-controls="w-rc" data-w="w-rc"><span class="chev">▸</span> Show the working</button>
+      <button class="pullq" data-claim="Review coverage at fastapi/fastapi is 7.8% — measured, high confidence, 90 of 200 pull requests (45%). Sovix edition 2026-09-13.">“ Quote this, with its qualifier</button>
+
+      <div class="working" id="w-rc" role="region" aria-label="The working for review coverage"><div><div class="inner">
+        <div class="wpart">
+          <p class="k">Derivation</p>
+          <div class="deriv"><span class="res">7.8%</span> <span class="op">=</span> 7 merged pull requests with a review <span class="op">/</span> 90 merged</div>
+        </div>
+        <div class="wpart">
+          <p class="k">Sample &amp; exclusions</p>
+          <div class="lbar" role="img" aria-label="Of 200 pull requests collected: 7 reviewed, 83 merged with no review recorded, 110 not merged and excluded">
+            <span class="lseg counted" style="width:3.5%"></span>
+            <span class="lseg uncounted" style="width:41.5%"></span>
+            <span class="lseg excluded" style="width:55%"></span>
+          </div>
+          <div class="lkey num">
+            <span><span class="sw" style="background:var(--ink)"></span><b>7</b> reviewed</span>
+            <span><span class="sw" style="background:repeating-linear-gradient(135deg,transparent 0 3px,rgba(27,24,19,.5) 3px 5px)"></span><b>83</b> merged, no review recorded</span>
+            <span><span class="sw" style="background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(27,24,19,.25) 4px 6px)"></span><b>110</b> not merged — excluded</span>
+          </div>
+          <p class="footcap">Of 200 collected; 6,323 exist. Fetched newest-first to the 8-page limit — coverage 45% of collected pull requests.</p>
+        </div>
+        <div class="wpart">
+          <p class="k">Conventions &amp; caveats</p>
+          <p class="num" style="font-family:var(--mono);font-size:12.5px">fired: review_coverage &lt; 50 · ruleset rccef86aa</p>
+          <p class="footcap">Thresholds are configurable policy conventions, not universal performance standards.</p>
+          <p>Only GitHub review records count. Approval given in a plain comment, over chat,
+          or in person is invisible — a team with a different review habit will score
+          unfairly low. Verify against the listed examples first.</p>
+          <p>83 of 90 merged pull requests carry no review record. If this team approves
+          changes verbally or in chat, that practice is invisible here — check two or three
+          of the named examples before treating this as a control failure.</p>
+        </div>
+        <div class="wpart">
+          <p class="k">Exemplars</p>
+          <div class="depo">
+            <div class="head">
+              <span class="rk">No. 1</span>
+              <a href="https://github.com/fastapi/fastapi/pull/16210" target="_blank" rel="noopener">fastapi/fastapi #16210</a>
+              <span class="w num">1,936 lines merged unreviewed · opened 2026-08-15 · merged 2026-08-19</span>
+            </div>
+            <p class="why">Opened and merged by pr-submit. 1,936 lines entered the product
+            with no second pair of eyes — the single clearest demonstration of what a low
+            coverage figure means in practice.</p>
+          </div>
+          <div class="depo">
+            <div class="head">
+              <span class="rk">No. 2</span>
+              <a href="https://github.com/fastapi/fastapi/pull/16209" target="_blank" rel="noopener">fastapi/fastapi #16209</a>
+              <span class="w num">1,890 lines merged unreviewed</span>
+            </div>
+            <p class="why">The same pattern, the same week: translation updates landing by
+            the thousand lines with nobody recorded as having read them.</p>
+          </div>
+        </div>
+        <div class="wpart">
+          <p class="k">Records</p>
+          <div class="rec-wrap">
+            <table class="records num">
+              <thead><tr><th>kind</th><th>ref</th><th>detail</th><th class="r">lines</th><th class="r">reviews</th><th>merged</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>pull_request</td><td>#16210</td><td>merged, no recorded review</td><td class="r">1,936</td><td class="r">0</td><td>2026-08-19</td><td><a href="https://github.com/fastapi/fastapi/pull/16210" target="_blank" rel="noopener">source ↗</a></td></tr>
+                <tr><td>pull_request</td><td>#16209</td><td>merged, no recorded review</td><td class="r">1,890</td><td class="r">0</td><td>2026-08-19</td><td><a href="https://github.com/fastapi/fastapi/pull/16209" target="_blank" rel="noopener">source ↗</a></td></tr>
+                <tr><td>pull_request</td><td>#16208</td><td>merged, no recorded review</td><td class="r">1,857</td><td class="r">0</td><td>2026-08-19</td><td><a href="https://github.com/fastapi/fastapi/pull/16208" target="_blank" rel="noopener">source ↗</a></td></tr>
+                <tr><td>pull_request</td><td>#16205</td><td>merged, no recorded review</td><td class="r">1,830</td><td class="r">0</td><td>2026-08-19</td><td><a href="https://github.com/fastapi/fastapi/pull/16205" target="_blank" rel="noopener">source ↗</a></td></tr>
+                <tr><td>pull_request</td><td>#16202</td><td>merged, no recorded review</td><td class="r">1,827</td><td class="r">0</td><td>2026-08-19</td><td><a href="https://github.com/fastapi/fastapi/pull/16202" target="_blank" rel="noopener">source ↗</a></td></tr>
+              </tbody>
+            </table>
+            <p class="rec-more">First 5 of 83 unreviewed merges. Every record remains addressable in the console.</p>
+          </div>
+        </div>
+      </div></div></div>
+    </div>
+
+    <div class="stmt">
+      <p class="label">Share of changes merged by their own author</p>
+      <div class="valrow">
+        <span class="value num">57.8<small>%</small></span>
+        <span class="cite"><span class="g">●</span> measured · high confidence · <span class="num">90 of 200 pull requests (45%)</span></span>
+      </div>
+      <p class="plain">How often the person who wrote a change was also the person who
+      pressed the button to put it into the product, with nobody else involved in between.</p>
+      <button class="wbtn" aria-expanded="false" aria-controls="w-sm" data-w="w-sm"><span class="chev">▸</span> Show the working</button>
+      <div class="working" id="w-sm" role="region" aria-label="The working for self-merge share"><div><div class="inner">
+        <div class="wpart"><p class="k">Derivation</p>
+          <div class="deriv"><span class="res">57.8%</span> <span class="op">=</span> 52 pull requests merged by their author <span class="op">/</span> 90 merged</div>
+        </div>
+        <div class="wpart"><p class="k">Caveat</p>
+          <p>A change properly reviewed and approved by a colleague and then merged by its
+          author still counts here. Read this next to review coverage rather than alone.</p>
+        </div>
+        <div class="wpart"><p class="k">Exemplar</p>
+          <div class="depo">
+            <div class="head"><span class="rk">No. 1</span>
+              <a href="https://github.com/fastapi/fastapi/pull/16224" target="_blank" rel="noopener">fastapi/fastapi #16224</a>
+              <span class="w num">243 lines, written and merged by tiangolo, no review</span>
+            </div>
+            <p class="why">Author, approver and merger are the same person. This is the exact
+            mechanism by which a review policy stops applying, and it is fixed with a branch
+            protection setting rather than a process document.</p>
+          </div>
+        </div>
+      </div></div></div>
+    </div>
+
+    <div class="stmt">
+      <p class="label">Share of work that bypassed pull requests</p>
+      <div class="valrow">
+        <span class="value num">92.5<small>%</small></span>
+        <span class="cite"><span class="g">◐</span> proxy · medium confidence · <span class="num">759 of 759 default-branch landings (100%)</span></span>
+      </div>
+      <p class="plain">How much work reached the main branch without going through the pull
+      request process at all — pushed straight onto the branch the product is built from.</p>
+      <button class="wbtn" aria-expanded="false" aria-controls="w-dp" data-w="w-dp"><span class="chev">▸</span> Show the working</button>
+      <div class="working" id="w-dp" role="region" aria-label="The working for direct push share"><div><div class="inner">
+        <div class="wpart"><p class="k">Derivation</p>
+          <div class="deriv"><span class="res">92.5%</span> <span class="op">=</span> 702 landings on master not traceable to a pull request <span class="op">/</span> 759</div>
+        </div>
+        <div class="wpart"><p class="k">Caveat</p>
+          <p>Squash merges rewrite commit hashes, which can make properly reviewed work look
+          like a direct push. Check the named examples before acting on a high figure.</p>
+        </div>
+        <div class="wpart"><p class="k">Exemplar</p>
+          <div class="depo">
+            <div class="head"><span class="rk">No. 1</span>
+              <a href="https://github.com/fastapi/fastapi/commit/9f4ecf562cffd79a2d6bff0eb333df5669bd70e1" target="_blank" rel="noopener">commit 9f4ecf56</a>
+              <span class="w num">“✅ Add inline snapshot tests for OpenAPI…” · 53,632 lines, no pull request</span>
+            </div>
+            <p class="why">53,632 lines by Sebastián Ramírez reached the release branch
+            without passing through review, approval or any audit trail. Verify against the
+            repository first: squash merges can also produce this pattern.</p>
+          </div>
+        </div>
+      </div></div></div>
+    </div>
+  </section>
+
+  <!-- ============ §2 SHIPPING ============ -->
+  <section class="reveal d4">
+    <p class="sec-no">§ 2 · Delivery</p>
+    <h2 class="q">How fast does work ship — and is speed the right word?</h2>
+
+    <div class="stmt">
+      <p class="label">Median time from ready to shipped</p>
+      <div class="valrow">
+        <span class="value num">12<small>&nbsp;min</small></span>
+        <span class="cite"><span class="g">●</span> measured · high confidence · <span class="num">90 of 200 pull requests (45%)</span></span>
+      </div>
+      <p class="plain">Once a developer says “my change is ready”, this is how long it
+      typically waits before it becomes part of the product. The slowest tenth take at
+      least <b class="num">4.1 days</b>. A twelve-minute median beside a 7.8% review rate
+      is not efficiency; it is an unguarded door.</p>
+      <button class="wbtn" aria-expanded="false" aria-controls="w-lt" data-w="w-lt"><span class="chev">▸</span> Show the working</button>
+      <div class="working" id="w-lt" role="region" aria-label="The working for lead time"><div><div class="inner">
+        <div class="wpart"><p class="k">Derivation</p>
+          <div class="deriv"><span class="res">0.2 h</span> <span class="op">=</span> median( merged_at − created_at ) <span class="op">over</span> 90 merged pull requests</div>
+        </div>
+        <div class="wpart"><p class="k">Sample &amp; exclusions</p>
+          <div class="lbar" role="img" aria-label="Of 200 pull requests: 90 merged counted, 110 excluded">
+            <span class="lseg counted" style="width:45%"></span>
+            <span class="lseg excluded" style="width:55%"></span>
+          </div>
+          <div class="lkey num">
+            <span><span class="sw" style="background:var(--ink)"></span><b>90</b> merged — counted</span>
+            <span><span class="sw" style="background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(27,24,19,.25) 4px 6px)"></span><b>110</b> excluded (15 open — no lead time exists; 95 closed unmerged)</span>
+          </div>
+        </div>
+        <div class="wpart"><p class="k">Assumption</p>
+          <p>A pull request counts as “ready” the moment it is opened. Teams that open
+          drafts early to share progress will look slower here than they really are.</p>
+        </div>
+        <div class="wpart"><p class="k">Exemplar</p>
+          <div class="depo">
+            <div class="head"><span class="rk">No. 1</span>
+              <a href="https://github.com/fastapi/fastapi/pull/16210" target="_blank" rel="noopener">fastapi/fastapi #16210</a>
+              <span class="w num">waited 4.2 days to merge — the slowest in scope</span>
+            </div>
+            <p class="why">It is what the typical figure is built from, and removing it would
+            move the number — the concrete case to examine first.</p>
+          </div>
+        </div>
+      </div></div></div>
+    </div>
+
+    <div class="stmt">
+      <p class="label">Median wait for the first human review</p>
+      <div class="valrow">
+        <span class="value num">5.0<small>&nbsp;h</small></span>
+        <span class="cite"><span class="g">●</span> measured · high confidence · <span class="num">23 of 200 pull requests (12%)</span></span>
+      </div>
+      <p class="plain">How long a finished change sits untouched before a colleague looks at
+      it. Pure waiting — and only the 23 reviewed pull requests can carry this number at all.</p>
+      <button class="wbtn" aria-expanded="false" aria-controls="w-fr" data-w="w-fr"><span class="chev">▸</span> Show the working</button>
+      <div class="working" id="w-fr" role="region" aria-label="The working for first review wait"><div><div class="inner">
+        <div class="wpart"><p class="k">Derivation</p>
+          <div class="deriv"><span class="res">5.0 h</span> <span class="op">=</span> median( first_review_at − created_at ) <span class="op">over</span> 23 reviewed pull requests</div>
+        </div>
+        <div class="wpart"><p class="k">Sample &amp; exclusions</p>
+          <div class="lbar" role="img" aria-label="Of 200 pull requests: 23 reviewed counted, 83 merged with no recorded review, 94 other excluded">
+            <span class="lseg counted" style="width:11.5%"></span>
+            <span class="lseg uncounted" style="width:41.5%"></span>
+            <span class="lseg excluded" style="width:47%"></span>
+          </div>
+          <div class="lkey num">
+            <span><span class="sw" style="background:var(--ink)"></span><b>23</b> reviewed — counted</span>
+            <span><span class="sw" style="background:repeating-linear-gradient(135deg,transparent 0 3px,rgba(27,24,19,.5) 3px 5px)"></span><b>83</b> merged, no recorded review</span>
+            <span><span class="sw" style="background:repeating-linear-gradient(45deg,transparent 0 4px,rgba(27,24,19,.25) 4px 6px)"></span><b>94</b> other — excluded</span>
+          </div>
+        </div>
+        <div class="wpart"><p class="k">Exemplar</p>
+          <div class="depo">
+            <div class="head"><span class="rk">No. 1</span>
+              <a href="https://github.com/fastapi/fastapi/pull/16111" target="_blank" rel="noopener">fastapi/fastapi #16111</a>
+              <span class="w num">sat 20.2 days before anyone reviewed it</span>
+            </div>
+            <p class="why">Pure queue time: the work was finished and idle for this long,
+            which is the cheapest delay in the whole pipeline to remove.</p>
+          </div>
+        </div>
+      </div></div></div>
+    </div>
+  </section>
+
+  <!-- ============ §3 ACROSS ============ -->
+  <section class="reveal d5">
+    <p class="sec-no">§ 3 · The portfolio</p>
+    <h2 class="q">Where does this repository sit among its peers?</h2>
+
+    <figure>
+      <figcaption>
+        <span class="fig">Fig. 1</span>
+        <span class="t">Recorded review coverage, across six repositories</span>
+        <span class="m">one dot per repository · shared 0–100% scale · filled dot marks fastapi/fastapi · hover a row to trace it</span>
+      </figcaption>
+      <div class="strip" aria-hidden="true">
+        <div class="axis"></div>
+        <div class="tick" style="left:0%"></div><div class="ticklab" style="left:0%">0%</div>
+        <div class="tick" style="left:25%"></div><div class="ticklab" style="left:25%">25</div>
+        <div class="tick" style="left:50%"></div><div class="ticklab" style="left:50%">50</div>
+        <div class="tick" style="left:75%"></div><div class="ticklab" style="left:75%">75</div>
+        <div class="tick" style="left:100%"></div><div class="ticklab" style="left:100%">100%</div>
+        <span class="slab focal" style="left:9%"><b>7.8%</b> fastapi</span>
+        <span class="slab" style="left:95%"><b>99.1–99.3%</b> helm · eslint</span>
+        <div class="sdot focal" style="left:7.8%" data-repo="fastapi"></div>
+        <div class="sdot" style="left:40%" data-repo="mitmproxy"></div>
+        <div class="sdot" style="left:65.5%" data-repo="axios"></div>
+        <div class="sdot" style="left:82%" data-repo="vite"></div>
+        <div class="sdot" style="left:99.1%" data-repo="helm"></div>
+        <div class="sdot" style="left:99.3%" data-repo="eslint"></div>
+      </div>
+      <table class="striptable num">
+        <tbody>
+          <tr class="focal" data-repo="fastapi"><td>fastapi/fastapi</td><td class="r">7.8%</td><td style="text-align:right">n=90 of 200</td></tr>
+          <tr data-repo="mitmproxy"><td>mitmproxy/mitmproxy</td><td class="r">40.0%</td><td style="text-align:right">n=100 of 200</td></tr>
+          <tr data-repo="axios"><td>axios/axios</td><td class="r">65.5%</td><td style="text-align:right">n=113 of 200</td></tr>
+          <tr data-repo="vite"><td>vitejs/vite</td><td class="r">82.0%</td><td style="text-align:right">n=89 of 200</td></tr>
+          <tr data-repo="helm"><td>helm/helm</td><td class="r">99.1%</td><td style="text-align:right">n=109 of 200</td></tr>
+          <tr data-repo="eslint"><td>eslint/eslint</td><td class="r">99.3%</td><td style="text-align:right">n=139 of 200</td></tr>
+        </tbody>
+      </table>
+      <p class="fig-note">Four of six repositories record reviews on most merges. This page's
+      subject records them on one merge in thirteen.</p>
+    </figure>
+
+    <figure>
+      <figcaption>
+        <span class="fig">Fig. 2</span>
+        <span class="t">Time from ready to shipped — the median joined to the slowest tenth</span>
+        <span class="m">p50 (filled) to p90 (open) · logarithmic scale, every tick labelled · the length of each line is the unpredictability</span>
+      </figcaption>
+      <div>
+        <div class="db-row" data-repo="axios"><span class="name">axios/axios</span>
+          <div class="db-track">
+            <span class="db-line" style="left:60.6%;width:34.9%"></span>
+            <span class="db-dot" style="left:60.6%"></span><span class="db-dot p90" style="left:95.5%"></span>
+            <span class="db-val" style="left:44%">17.8 h</span><span class="db-val" style="left:96.5%;top:auto;bottom:-2px">11.7 d</span>
+          </div>
+        </div>
+        <div class="db-row" data-repo="eslint"><span class="name">eslint/eslint</span>
+          <div class="db-track">
+            <span class="db-line" style="left:50.7%;width:35.4%"></span>
+            <span class="db-dot" style="left:50.7%"></span><span class="db-dot p90" style="left:86.1%"></span>
+            <span class="db-val" style="left:36%">8.2 h</span><span class="db-val" style="left:87.5%;top:auto;bottom:-2px">5.6 d</span>
+          </div>
+        </div>
+        <div class="db-row focal" data-repo="fastapi"><span class="name">fastapi/fastapi</span>
+          <div class="db-track">
+            <span class="db-line" style="left:3.6%;width:78.6%"></span>
+            <span class="db-dot" style="left:3.6%"></span><span class="db-dot p90" style="left:82.2%"></span>
+            <span class="db-val" style="left:5%">12 min</span><span class="db-val" style="left:83.5%;top:auto;bottom:-2px">4.1 d</span>
+          </div>
+        </div>
+        <div class="db-row" data-repo="helm"><span class="name">helm/helm</span>
+          <div class="db-track">
+            <span class="db-line" style="left:56.6%;width:10.6%"></span>
+            <span class="db-dot" style="left:56.6%"></span><span class="db-dot p90" style="left:67.2%"></span>
+            <span class="db-val" style="left:41%">13.0 h</span><span class="db-val" style="left:69%;top:auto;bottom:-2px">30.1 h</span>
+          </div>
+        </div>
+        <div class="db-row" data-repo="mitmproxy"><span class="name">mitmproxy/mitmproxy</span>
+          <div class="db-track">
+            <span class="db-line" style="left:61.3%;width:34.3%"></span>
+            <span class="db-dot" style="left:61.3%"></span><span class="db-dot p90" style="left:95.6%"></span>
+            <span class="db-val" style="left:47%">18.9 h</span><span class="db-val" style="left:97%;top:auto;bottom:-2px">11.8 d</span>
+          </div>
+        </div>
+        <div class="db-row" data-repo="vite" style="border-bottom:1px solid var(--rule-dark)"><span class="name">vitejs/vite</span>
+          <div class="db-track">
+            <span class="db-line" style="left:55.3%;width:35.2%"></span>
+            <span class="db-dot" style="left:55.3%"></span><span class="db-dot p90" style="left:90.5%"></span>
+            <span class="db-val" style="left:40%">11.8 h</span><span class="db-val" style="left:92%;top:auto;bottom:-2px">7.9 d</span>
+          </div>
+        </div>
+        <div class="db-row" style="border-bottom:0"><span class="name" aria-hidden="true"></span>
+          <div class="db-axis">
+            <div class="tick" style="left:6.5%"></div><div class="ticklab" style="left:6.5%">15 min</div>
+            <div class="tick" style="left:24%"></div><div class="ticklab" style="left:24%">1 h</div>
+            <div class="tick" style="left:46.8%"></div><div class="ticklab" style="left:46.8%">6 h</div>
+            <div class="tick" style="left:64.3%"></div><div class="ticklab" style="left:64.3%">1 d</div>
+            <div class="tick" style="left:89%"></div><div class="ticklab" style="left:89%">1 w</div>
+          </div>
+        </div>
+      </div>
+      <p class="fig-note">helm's line is short — thirteen hours to thirty: predictable.
+      fastapi's runs from twelve minutes to four days, and mitmproxy's reaches nearly
+      twelve days. The line, not the dot, is the finding.</p>
+    </figure>
+  </section>
+
+  <footer class="colophon num">
+    <span>Sovix · engineering evidence, with the working shown</span>
+    <span>snapshot 2026-09-13 07:06 UTC · collection 225.3 s · 0 LLM calls</span>
+    <span><a href="#">Ledger — all 57 metrics</a> · <a href="#">Method &amp; thresholds</a></span>
+  </footer>
+</main>
+
+<script>
+// Running header shadow on scroll — the document remembers you are inside it.
+var running=document.getElementById('running');
+addEventListener('scroll',function(){running.classList.toggle('scrolled',scrollY>8)},{passive:true});
+// Disclosures.
+document.querySelectorAll('.wbtn').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var w=document.getElementById(btn.dataset.w);
+    var open=w.classList.toggle('open');
+    btn.setAttribute('aria-expanded',open);
+    btn.childNodes.forEach(function(n){
+      if(n.nodeType===3&&n.textContent.trim())
+        n.textContent=open?' Fold the working away':' Show the working';
+    });
+  });
+});
+// Quote — the claim travels with its qualifier, by construction.
+document.querySelectorAll('.pullq').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    navigator.clipboard&&navigator.clipboard.writeText(btn.dataset.claim);
+    var t=btn.textContent;btn.textContent='“ Copied — qualifier attached';btn.classList.add('done');
+    setTimeout(function(){btn.textContent=t;btn.classList.remove('done')},1700);
+  });
+});
+// Linked tracing across figures. Enrichment only — every value is printed.
+function setHL(repo,on){
+  document.querySelectorAll('[data-repo="'+repo+'"]').forEach(function(el){el.classList.toggle('hl',on)});
+}
+document.querySelectorAll('[data-repo]').forEach(function(el){
+  el.addEventListener('mouseenter',function(){setHL(el.dataset.repo,true)});
+  el.addEventListener('mouseleave',function(){setHL(el.dataset.repo,false)});
+});
+</script>
+</body>
+</html>

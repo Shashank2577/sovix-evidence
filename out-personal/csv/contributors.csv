@@ -1,0 +1,342 @@
+scope_key,person_key,display_name,emails,github_login,commits,lines_changed
+org:all,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,3167,2082295
+org:all,email:naveen@greyparrots.co.in,Naveen Kumar,naveen@greyparrots.co.in,,4,1855079
+org:all,email:steve@builder.io,Steve Sewell,sewell.steve@gmail.com | steve@builder.io,,793,1588623
+org:all,email:oleksii.mitrov.abacus@gmail.com,Oleksii Mitrov,oleksii.mitrov.abacus@gmail.com,,2,906568
+org:all,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,961,523687
+org:all,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,535,188575
+org:all,email:purushotam.thakur@coforge.com,Purushotam Thakur,purushotam.thakur@coforge.com | purusotam.thakur@coforge.com,,94,157558
+org:all,email:161369871+google-labs-jules[bot]@users.noreply.github.com,google-labs-jules[bot],,,104,62305
+org:all,gh:copilot,copilot-swe-agent[bot],,,1,58005
+org:all,email:ignjic@gmail.com,David Ignjic,david.ignjic@agricircle.com | ignjic@gmail.com,,183,54447
+org:all,email:noreply@google.com,Google AI Edge Gallery,noreply@google.com,,124,49989
+org:all,email:shiva.kumar@coforge.com,Shiva Kumar,shiva.kumar@coforge.com | shivakmr018@gmail.com,,107,49738
+org:all,gh:jinjingforever,Jing Jin,8752427+jinjingforever@users.noreply.github.com,jinjingforever,90,28258
+org:all,email:shashank2577@gmail.com,Shashank,shashank2577@gmail.com,,37,24540
+org:all,email:41898282+claude[bot]@users.noreply.github.com,claude[bot],,,89,24322
+org:all,email:actions@github.com,reporadar-bot,actions@github.com,,738,24065
+org:all,email:z@container,Z User,z@container,,11,22660
+org:all,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,57,20678
+org:all,email:vishwas.g5@gmail.com,Vishwas,vishwas.g5@gmail.com,,79,20429
+org:all,email:tashfene@gmail.com,tashfeenahmed,tashfene@gmail.com,,81,18690
+org:all,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,26,15804
+org:all,email:hitesh.2.kumar@coforge.com,Hitesh Kumar,hitesh.2.kumar@coforge.com,,61,14299
+org:all,email:aakash.agarwal@coforge.com,Aakash Agarwal,aakash.agarwal@coforge.com,,25,13117
+org:all,email:builder-bot@builder.io,Builder.io,,,46,12543
+org:all,email:tibor.gemes@umantis.com,Tibor Gémes,tibor.gemes@umantis.com,,107,12101
+project:Sovix,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,80,94588
+project:Sovix,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,102,9453
+project:Sovix,email:safeguarddevtz@taazaa.com,Shashank2577,safeguarddevtz@taazaa.com,Shashank2577,1,1795
+repo:Shashank2577/sovix-evidence,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,12,64545
+repo:Shashank2577/sovix-evidence-ui,email:safeguarddevtz@taazaa.com,Shashank2577,safeguarddevtz@taazaa.com,Shashank2577,1,1795
+repo:Shashank2577/sovix-ai-brain,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,49,3864
+repo:Shashank2577/sovix-ai-brain,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,98,2956
+repo:Shashank2577/sovix-cli,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,4,6497
+repo:Shashank2577/sovix-cli,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,17,5107
+repo:Shashank2577/receipts,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,2,21072
+project:Prompture,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,564,186275
+project:Prompture,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,45,5809
+project:Prompture,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,16,4642
+repo:Shashank2577/prompture,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,563,186266
+repo:Shashank2577/prompture,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,45,5809
+repo:Shashank2577/prompture,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,16,4642
+repo:Shashank2577/prompture-cli,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,9
+project:Spreix,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,207,459664
+project:Spreix,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,232,114700
+project:Spreix,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,40,13855
+project:Spreix,gh:kiro-agent,Kiro Agent,244629292+kiro-agent@users.noreply.github.com,kiro-agent,7,1169
+repo:Shashank2577/spreix-platform,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,225,112693
+repo:Shashank2577/spreix-platform,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,98,74761
+repo:Shashank2577/spreix-platform,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,36,12525
+repo:Shashank2577/spreix-brain,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,6,6256
+repo:Shashank2577/spreix-notetaker,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,20,129911
+repo:Shashank2577/spreix-notetaker,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,4,1330
+repo:Shashank2577/spreix-notetaker,gh:kiro-agent,Kiro Agent,244629292+kiro-agent@users.noreply.github.com,kiro-agent,7,1169
+repo:Shashank2577/spreix-boat,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,83,248736
+repo:Shashank2577/spreix-boat,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,7,2007
+project:AI SDLC,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,234,95813
+project:AI SDLC,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,29,49108
+repo:Shashank2577/ai-sdlc,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,122,31159
+repo:Shashank2577/ai-sdlc-pilot,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,7,298
+repo:Shashank2577/ai-cos,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,105,64356
+repo:Shashank2577/ai-cos,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,11,40161
+repo:Shashank2577/backlot,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,18,8947
+project:OpenCover,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,97,91035
+repo:Shashank2577/opencover-complete,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,95,83246
+repo:Shashank2577/openCover-codex,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,2,7789
+project:Axon,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,6,18804
+repo:Shashank2577/axon,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,5,18803
+repo:Shashank2577/axon-sandbox,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,1
+project:Agent walkthroughs,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,87,52087
+project:Agent walkthroughs,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,16,4181
+project:Agent walkthroughs,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,1,2181
+repo:Shashank2577/awesome-claude-code-walkthrough,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,2,2908
+repo:Shashank2577/awesome-copilot-walkthrough,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,2928
+repo:Shashank2577/awesome-cursor-walkthrough,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,2855
+repo:Shashank2577/awesome-codex-walkthrough,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,3036
+repo:Shashank2577/awesome-claude-jules,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,799
+repo:Shashank2577/Awesome-managed-agent,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,81,39561
+repo:Shashank2577/Awesome-managed-agent,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,16,4181
+repo:Shashank2577/Awesome-managed-agent,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,1,2181
+project:Java platform,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,200,354375
+project:Java platform,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,84,107746
+project:Java platform,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,94,69954
+project:Java platform,"email:shashank.saxena@coforge,com",shash,"shashank.saxena@coforge,com",,3,533
+repo:Shashank2577/java-microservices-framework,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,8,52899
+repo:Shashank2577/micro-saas,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,136,183449
+repo:Shashank2577/micro-saas,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,84,107746
+repo:Shashank2577/micro-saas,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,87,65967
+repo:Shashank2577/micro-saas-java,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,26,33112
+repo:Shashank2577/micro-saas-java,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,7,3987
+repo:Shashank2577/JavaRAG,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,3921
+repo:Shashank2577/JavaRAG,"email:shashank.saxena@coforge,com",shash,"shashank.saxena@coforge,com",,3,533
+repo:Shashank2577/payload-utility,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,2,52199
+repo:Shashank2577/cross-cutting,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,27,28795
+project:Observability,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,6,16737
+project:Observability,email:cursoragent@cursor.com,Cursor Agent,cursoragent@cursor.com,,2,333
+repo:Shashank2577/observability,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,4987
+repo:Shashank2577/Observability-Jager-GroundCover,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,5,11750
+repo:Shashank2577/Observability-Jager-GroundCover,email:cursoragent@cursor.com,Cursor Agent,cursoragent@cursor.com,,2,333
+project:Growth and marketing,email:z@container,Z User,z@container,,11,22660
+project:Growth and marketing,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,34,11727
+project:Growth and marketing,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,10,5297
+project:Growth and marketing,email:shashank2577@gmail.com,Shashank,shashank2577@gmail.com,,5,791
+project:Growth and marketing,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,54,24
+repo:Shashank2577/growth-dashboard,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,29,9962
+repo:Shashank2577/growth-dashboard,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,53,0
+repo:Shashank2577/GrowthOS,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,4,2964
+repo:Shashank2577/GrowthOS,email:shashank2577@gmail.com,Shashank,shashank2577@gmail.com,,5,791
+repo:Shashank2577/GrowthOS,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,125
+repo:Shashank2577/GrowthOS,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,1,24
+repo:Shashank2577/Marketing,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,6,2333
+repo:Shashank2577/shashanksaxena.info,email:z@container,Z User,z@container,,11,22660
+repo:Shashank2577/shashanksaxena.info,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,4,1640
+project:Unassigned repositories,email:naveen@greyparrots.co.in,Naveen Kumar,naveen@greyparrots.co.in,,4,1855079
+project:Unassigned repositories,email:steve@builder.io,Steve Sewell,sewell.steve@gmail.com | steve@builder.io,,793,1588623
+project:Unassigned repositories,email:oleksii.mitrov.abacus@gmail.com,Oleksii Mitrov,oleksii.mitrov.abacus@gmail.com,,2,906568
+project:Unassigned repositories,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1835,833030
+project:Unassigned repositories,email:purushotam.thakur@coforge.com,Purushotam Thakur,purushotam.thakur@coforge.com | purusotam.thakur@coforge.com,,94,157558
+project:Unassigned repositories,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,206,138618
+project:Unassigned repositories,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,451,80829
+project:Unassigned repositories,email:ignjic@gmail.com,David Ignjic,david.ignjic@agricircle.com | ignjic@gmail.com,,183,54447
+project:Unassigned repositories,email:noreply@google.com,Google AI Edge Gallery,noreply@google.com,,124,49989
+project:Unassigned repositories,email:shiva.kumar@coforge.com,Shiva Kumar,shiva.kumar@coforge.com | shivakmr018@gmail.com,,107,49738
+project:Unassigned repositories,gh:jinjingforever,Jing Jin,8752427+jinjingforever@users.noreply.github.com,jinjingforever,90,28258
+project:Unassigned repositories,email:actions@github.com,reporadar-bot,actions@github.com,,738,24065
+project:Unassigned repositories,email:shashank2577@gmail.com,Shashank,shashank2577@gmail.com,,32,23749
+project:Unassigned repositories,email:vishwas.g5@gmail.com,Vishwas,vishwas.g5@gmail.com,,79,20429
+project:Unassigned repositories,email:tashfene@gmail.com,tashfeenahmed,tashfene@gmail.com,,81,18690
+project:Unassigned repositories,email:hitesh.2.kumar@coforge.com,Hitesh Kumar,hitesh.2.kumar@coforge.com,,61,14299
+project:Unassigned repositories,email:aakash.agarwal@coforge.com,Aakash Agarwal,aakash.agarwal@coforge.com,,25,13117
+project:Unassigned repositories,email:tibor.gemes@umantis.com,Tibor Gémes,tibor.gemes@umantis.com,,107,12101
+project:Unassigned repositories,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,16,10507
+project:Unassigned repositories,name:dev,dev,dev@ragpipeline.local,,3,10026
+project:Unassigned repositories,email:sterling.chin@gmail.com,Sterling Chin,sterling.chin@gmail.com,,35,9334
+project:Unassigned repositories,email:geeta.sanwal@coforge.com,Geeta Sanwal,geeta.sanwal@coforge.com,,34,6970
+project:Unassigned repositories,email:marcin.szumski@umantis.com,Marcin Szumski,marcin.szumski@umantis.com,,36,6304
+project:Unassigned repositories,gh:gossterrible,Boni,8872212+gossterrible@users.noreply.github.com,gossterrible,6,5757
+project:Unassigned repositories,email:nefodov.nazar@proton.me,Nazar Nefodov,nefodov.nazar@proton.me,,4,4107
+repo:Shashank2577/reporadar,email:actions@github.com,reporadar-bot,actions@github.com,,738,24065
+repo:Shashank2577/reporadar,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,369,7536
+repo:Shashank2577/reporadar,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,389,4066
+repo:Shashank2577/reporadar,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,28,1868
+repo:Shashank2577/OBSERVE,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,326,155083
+repo:Shashank2577/OBSERVE,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,101,22743
+repo:Shashank2577/OBSERVE,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,3,1478
+repo:Shashank2577/obsidian-vault,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,363,14700
+repo:Shashank2577/obsidian-vault,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,14,121
+repo:Shashank2577/bootstrap-fixture-209,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,3,49
+repo:Shashank2577/claude-forza-horizon,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,3,82579
+repo:Shashank2577/Shashank2577,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,3,53
+repo:Shashank2577/lumen,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,18,14427
+repo:Shashank2577/lumen,name:dev,dev,dev@ragpipeline.local,,3,10026
+repo:Shashank2577/cortex,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,4,37729
+repo:Shashank2577/oh-my-tokens,email:tashfene@gmail.com,tashfeenahmed,tashfene@gmail.com,,81,18690
+repo:Shashank2577/oh-my-tokens,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,2,3343
+repo:Shashank2577/oh-my-tokens,gh:moaaz12-web,Moaaz Siddiqui,80547044+moaaz12-web@users.noreply.github.com,moaaz12-web,1,1049
+repo:Shashank2577/oh-my-tokens,gh:nordbyte,Ricardo,322585+nordbyte@users.noreply.github.com,nordbyte,7,917
+repo:Shashank2577/oh-my-tokens,email:tazrifraim@gmail.com,Tazrif Raim,tazrifraim@gmail.com,,1,437
+repo:Shashank2577/oh-my-tokens,gh:thedavidweng,Davy,95214375+thedavidweng@users.noreply.github.com,thedavidweng,1,176
+repo:Shashank2577/oh-my-tokens,gh:danscmax,danscMax,153344025+danscmax@users.noreply.github.com,danscmax,2,175
+repo:Shashank2577/oh-my-tokens,email:yuvrajsisodiya7302@gmail.com,Yuvraj Singh Sisodiya,yuvrajsisodiya7302@gmail.com,,1,122
+repo:Shashank2577/oh-my-tokens,gh:tushar49,Tushar49,78557049+tushar49@users.noreply.github.com,tushar49,4,99
+repo:Shashank2577/oh-my-tokens,email:praveenkumarpranjal09@gmail.com,Praveen Kumar Pranjal,praveenkumarpranjal09@gmail.com,,1,89
+repo:Shashank2577/oh-my-tokens,gh:nicyoong,Nic,73386479+nicyoong@users.noreply.github.com,nicyoong,1,85
+repo:Shashank2577/oh-my-tokens,email:deadcow@archlinux.com.br,Thiago Freitas,deadcow@archlinux.com.br,,1,71
+repo:Shashank2577/oh-my-tokens,gh:chongjiazhen,Chong Jia Zhen,110578271+chongjiazhen@users.noreply.github.com,chongjiazhen,1,65
+repo:Shashank2577/oh-my-tokens,gh:sumit4codes,Sumit,146418453+sumit4codes@users.noreply.github.com,sumit4codes,1,54
+repo:Shashank2577/oh-my-tokens,gh:vinhphamai,Pham Quang Vinh VNU,115690131+vinhphamai@users.noreply.github.com,vinhphamai,1,51
+repo:Shashank2577/oh-my-tokens,gh:jhash,Jake Hash,1508098+jhash@users.noreply.github.com,jhash,1,26
+repo:Shashank2577/oh-my-tokens,gh:robomwm,RoboMWM,robomwm@users.noreply.github.com,robomwm,1,26
+repo:Shashank2577/oh-my-tokens,email:brandonharvey@icloud.com,bharvey42,brandonharvey@icloud.com,,1,6
+repo:Shashank2577/oh-my-tokens,gh:lukasulc,Luka Šulc,68392977+lukasulc@users.noreply.github.com,lukasulc,1,0
+repo:Shashank2577/kb,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,44,11724
+repo:Shashank2577/demopilot,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,7,5542
+repo:Shashank2577/platform-services,email:shashank2577@gmail.com,Shashank,shashank2577@gmail.com,,2,903
+repo:Shashank2577/platform-services,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,16,816
+repo:Shashank2577/clickup,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,170,124885
+repo:Shashank2577/clickup,email:shashank2577@gmail.com,Shashank,shashank2577@gmail.com,,30,22846
+repo:Shashank2577/clickup,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,22,12031
+repo:Shashank2577/clickup,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,13,9029
+repo:Shashank2577/clickup,email:cleo@openclaw,Cleo,cleo@openclaw,,1,2015
+repo:Shashank2577/clickup,email:cleo@openclaw.ai,Cleo,cleo@openclaw.ai,,1,1276
+repo:Shashank2577/clickup,email:ubuntu@ip-172-26-4-216.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-4-216.ap-south-1.compute.internal,,1,556
+repo:Shashank2577/agent-native-deploy,email:steve@builder.io,Steve Sewell,sewell.steve@gmail.com | steve@builder.io,,793,1588623
+repo:Shashank2577/agent-native-deploy,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,7,27429
+repo:Shashank2577/agent-native-deploy,email:vishwas.g5@gmail.com,Vishwas,vishwas.g5@gmail.com,,79,20429
+repo:Shashank2577/agent-native-deploy,gh:gossterrible,Boni,8872212+gossterrible@users.noreply.github.com,gossterrible,6,5757
+repo:Shashank2577/agent-native-deploy,email:noreply@agent-native.com,agent-native,noreply@agent-native.com | noreply@agent-native.dev,,9,3986
+repo:Shashank2577/agent-native-deploy,gh:zuchka,matt abrams,37156449+zuchka@users.noreply.github.com | zuchka@users.noreply.github.com,zuchka,31,3211
+repo:Shashank2577/agent-native-deploy,email:korey@builder.io,Korey Kassir,korey@builder.io,,12,2614
+repo:Shashank2577/agent-native-deploy,email:madison@builder.io,Madison Dickson,madison@builder.io | madison@mjkd.dev,,6,2093
+repo:Shashank2577/agent-native-deploy,email:sidmohanty11@gmail.com,Sidharth Mohanty,sidmohanty11@gmail.com,,4,2013
+repo:Shashank2577/agent-native-deploy,gh:shomix,shomix,100691266+shomix@users.noreply.github.com,shomix,9,1891
+repo:Shashank2577/agent-native-deploy,email:jsduncan98@gmail.com,Shannon Duncan,jsduncan98@gmail.com,,1,390
+repo:Shashank2577/agent-native-deploy,email:me@sami.website,Sami Jaber,me@sami.website,,2,15
+repo:Shashank2577/agent-native-deploy,gh:paprikaf,Ahmed felfel,36571501+paprikaf@users.noreply.github.com,paprikaf,1,5
+repo:Shashank2577/marvin-template,email:sterling.chin@gmail.com,Sterling Chin,sterling.chin@gmail.com,,35,9334
+repo:Shashank2577/marvin-template,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,3,716
+repo:Shashank2577/marvin-template,email:deepak1.ramachandran@gmail.com,prdeepak,deepak1.ramachandran@gmail.com,,4,312
+repo:Shashank2577/marvin-template,email:peter.vanhee@gmail.com,Peter Vanhee,peter.vanhee@gmail.com,,1,230
+repo:Shashank2577/Awesome-BI,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,28,10663
+repo:Shashank2577/Awesome-BI,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,7,170
+repo:Shashank2577/LOAN-MUDRA,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,2,558
+repo:Shashank2577/closepilot,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,53,31968
+repo:Shashank2577/closepilot,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,15,12431
+repo:Shashank2577/Nexus-BE,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,81,81112
+repo:Shashank2577/Nexus-BE,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,1,229
+repo:Shashank2577/Nexus-BE,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,1,70
+repo:Shashank2577/claw-assistant,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,44,37868
+repo:Shashank2577/claw-assistant,email:action@github.com,GitHub Action,action@github.com,,26,154
+repo:Shashank2577/claw-assistant,email:claude@anthropic.com,Claude,claude@anthropic.com,,1,0
+repo:Shashank2577/awesome-free-deals,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,1,1
+repo:Shashank2577/framer-templates,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,14,7386
+repo:Shashank2577/framer-templates,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,2,3641
+repo:Shashank2577/oh-my-design,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,61,106550
+repo:Shashank2577/oh-my-design,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,59,73052
+repo:Shashank2577/pocket-ai,email:noreply@google.com,Google AI Edge Gallery,noreply@google.com,,124,49989
+repo:Shashank2577/pocket-ai,gh:jinjingforever,Jing Jin,8752427+jinjingforever@users.noreply.github.com,jinjingforever,90,28258
+repo:Shashank2577/pocket-ai,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,12,3479
+repo:Shashank2577/pocket-ai,email:whhone@google.com,Wai Hon Law,whhone@google.com,,22,830
+repo:Shashank2577/pocket-ai,email:ypang@google.com,Yishuang Pang,ypang@google.com,,19,742
+repo:Shashank2577/pocket-ai,email:yijieyang@google.com,Eric Yang,yijieyang@google.com,,12,682
+repo:Shashank2577/pocket-ai,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,1,611
+repo:Shashank2577/pocket-ai,email:zichuanwei@google.com,Zichuan Wei,zichuanwei@google.com,,10,362
+repo:Shashank2577/pocket-ai,gh:ymodak,Yasir Modak,42785357+ymodak@users.noreply.github.com,ymodak,11,226
+repo:Shashank2577/pocket-ai,email:deepaknagaraj@google.com,Deepak Nagaraj,deepaknagaraj@google.com,,5,107
+repo:Shashank2577/pocket-ai,email:linazhao@google.com,Na Li,linazhao@google.com,,1,82
+repo:Shashank2577/pocket-ai,email:niuchl@google.com,Chunlei Niu,niuchl@google.com,,1,0
+repo:Shashank2577/pocket-ai,email:cpovirk@google.com,cpovirk,cpovirk@google.com,,1,0
+repo:Shashank2577/pocket-ai,email:esmaeel.moustafa@thermondo.de,esmaeelmoustafa,esmaeel.moustafa@thermondo.de,,1,0
+repo:Shashank2577/pocket-ai,email:hridaychhabria7@gmail.com,Hriday Chhabria,hridaychhabria7@gmail.com,,2,0
+repo:Shashank2577/awesome-java-modules,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,28,42322
+repo:Shashank2577/awesome-freestack,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,5877
+repo:Shashank2577/hesoyam-for-claude-code,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,9,8011
+repo:Shashank2577/common-skills,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,1,0
+repo:Shashank2577/TinySteps,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,2,700
+repo:Shashank2577/insightagent---deep-research-ai,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,26,25611
+repo:Shashank2577/insightstream-transcriber,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,9,22950
+repo:Shashank2577/muncipality-Tax,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,2,4472
+repo:Shashank2577/um,email:naveen@greyparrots.co.in,Naveen Kumar,naveen@greyparrots.co.in,,4,1855079
+repo:Shashank2577/um,email:oleksii.mitrov.abacus@gmail.com,Oleksii Mitrov,oleksii.mitrov.abacus@gmail.com,,2,906568
+repo:Shashank2577/um,email:purushotam.thakur@coforge.com,Purushotam Thakur,purushotam.thakur@coforge.com | purusotam.thakur@coforge.com,,94,157558
+repo:Shashank2577/um,email:ignjic@gmail.com,David Ignjic,david.ignjic@agricircle.com | ignjic@gmail.com,,183,54447
+repo:Shashank2577/um,email:shiva.kumar@coforge.com,Shiva Kumar,shiva.kumar@coforge.com | shivakmr018@gmail.com,,107,49738
+repo:Shashank2577/um,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,132,38393
+repo:Shashank2577/um,email:hitesh.2.kumar@coforge.com,Hitesh Kumar,hitesh.2.kumar@coforge.com,,61,14299
+repo:Shashank2577/um,email:aakash.agarwal@coforge.com,Aakash Agarwal,aakash.agarwal@coforge.com,,25,13117
+repo:Shashank2577/um,email:tibor.gemes@umantis.com,Tibor Gémes,tibor.gemes@umantis.com,,107,12101
+repo:Shashank2577/um,email:geeta.sanwal@coforge.com,Geeta Sanwal,geeta.sanwal@coforge.com,,34,6970
+repo:Shashank2577/um,email:marcin.szumski@umantis.com,Marcin Szumski,marcin.szumski@umantis.com,,36,6304
+repo:Shashank2577/um,email:nefodov.nazar@proton.me,Nazar Nefodov,nefodov.nazar@proton.me,,4,4107
+repo:Shashank2577/um,email:logofatuionut@yahoo.com,Ionut Logofatu,logofatuionut@yahoo.com,,1,2213
+repo:Shashank2577/um,email:himani.dangwal@coforge.com,Himani Dangwal,himani.dangwal@coforge.com,,11,2174
+repo:Shashank2577/um,email:fvogli6@gmail.com,Fatjon Vogli,fvogli6@gmail.com,,3,1043
+repo:Shashank2577/um,"email:shashank.saxena@coforge,com",shash,"shashank.saxena@coforge,com",,7,34
+repo:Shashank2577/um,email:marc.elser+renovate@umantis.com,renovatebot runner,marc.elser+renovate@umantis.com,,97,34
+repo:Shashank2577/um,email:konstantin.volenbovskyi@umantis.com,Konstantin Volenbovskyi,konstantin.volenbovskyi@umantis.com,,1,29
+repo:Shashank2577/NCRT_AI,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,2,1331
+repo:Shashank2577/NexusAPI,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,3,2871
+repo:Shashank2577/splitwise,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,2,2708
+repo:Shashank2577/interview-preps,"email:shashank.saxena@coforge,com",shash,"shashank.saxena@coforge,com",,1,122
+repo:Shashank2577/interview-preps,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,1,2
+person:email:aakash.agarwal@coforge.com,email:aakash.agarwal@coforge.com,Aakash Agarwal,aakash.agarwal@coforge.com,,25,13117
+person:email:noreply@agent-native.com,email:noreply@agent-native.com,agent-native,noreply@agent-native.com | noreply@agent-native.dev,,9,3986
+person:gh:paprikaf,gh:paprikaf,Ahmed felfel,36571501+paprikaf@users.noreply.github.com,paprikaf,1,5
+person:email:brandonharvey@icloud.com,email:brandonharvey@icloud.com,bharvey42,brandonharvey@icloud.com,,1,6
+person:gh:gossterrible,gh:gossterrible,Boni,8872212+gossterrible@users.noreply.github.com,gossterrible,6,5757
+person:gh:chongjiazhen,gh:chongjiazhen,Chong Jia Zhen,110578271+chongjiazhen@users.noreply.github.com,chongjiazhen,1,65
+person:email:niuchl@google.com,email:niuchl@google.com,Chunlei Niu,niuchl@google.com,,1,0
+person:email:noreply@anthropic.com,email:noreply@anthropic.com,Claude,noreply@anthropic.com,,57,20678
+person:email:claude@anthropic.com,email:claude@anthropic.com,Claude,claude@anthropic.com,,1,0
+person:email:cleo@openclaw,email:cleo@openclaw,Cleo,cleo@openclaw,,1,2015
+person:email:cleo@openclaw.ai,email:cleo@openclaw.ai,Cleo,cleo@openclaw.ai,,1,1276
+person:email:cpovirk@google.com,email:cpovirk@google.com,cpovirk,cpovirk@google.com,,1,0
+person:email:cursoragent@cursor.com,email:cursoragent@cursor.com,Cursor Agent,cursoragent@cursor.com,,2,333
+person:gh:danscmax,gh:danscmax,danscMax,153344025+danscmax@users.noreply.github.com,danscmax,2,175
+person:email:ignjic@gmail.com,email:ignjic@gmail.com,David Ignjic,david.ignjic@agricircle.com | ignjic@gmail.com,,183,54447
+person:gh:thedavidweng,gh:thedavidweng,Davy,95214375+thedavidweng@users.noreply.github.com,thedavidweng,1,176
+person:email:deepaknagaraj@google.com,email:deepaknagaraj@google.com,Deepak Nagaraj,deepaknagaraj@google.com,,5,107
+person:name:dev,name:dev,dev,dev@ragpipeline.local,,3,10026
+person:email:shashank.saxena@taazaa.com,email:shashank.saxena@taazaa.com,Engineering Core,engineering_core@taazaa.com | shash2577@gmail.com | shashank.saxena@coforge.com | shashank.saxena@taazaa.com,,3167,2082295
+person:email:yijieyang@google.com,email:yijieyang@google.com,Eric Yang,yijieyang@google.com,,12,682
+person:email:esmaeel.moustafa@thermondo.de,email:esmaeel.moustafa@thermondo.de,esmaeelmoustafa,esmaeel.moustafa@thermondo.de,,1,0
+person:email:fvogli6@gmail.com,email:fvogli6@gmail.com,Fatjon Vogli,fvogli6@gmail.com,,3,1043
+person:email:geeta.sanwal@coforge.com,email:geeta.sanwal@coforge.com,Geeta Sanwal,geeta.sanwal@coforge.com,,34,6970
+person:email:action@github.com,email:action@github.com,GitHub Action,action@github.com,,26,154
+person:email:noreply@google.com,email:noreply@google.com,Google AI Edge Gallery,noreply@google.com,,124,49989
+person:email:himani.dangwal@coforge.com,email:himani.dangwal@coforge.com,Himani Dangwal,himani.dangwal@coforge.com,,11,2174
+person:email:hitesh.2.kumar@coforge.com,email:hitesh.2.kumar@coforge.com,Hitesh Kumar,hitesh.2.kumar@coforge.com,,61,14299
+person:email:hridaychhabria7@gmail.com,email:hridaychhabria7@gmail.com,Hriday Chhabria,hridaychhabria7@gmail.com,,2,0
+person:email:logofatuionut@yahoo.com,email:logofatuionut@yahoo.com,Ionut Logofatu,logofatuionut@yahoo.com,,1,2213
+person:gh:jhash,gh:jhash,Jake Hash,1508098+jhash@users.noreply.github.com,jhash,1,26
+person:gh:jinjingforever,gh:jinjingforever,Jing Jin,8752427+jinjingforever@users.noreply.github.com,jinjingforever,90,28258
+person:gh:kiro-agent,gh:kiro-agent,Kiro Agent,244629292+kiro-agent@users.noreply.github.com,kiro-agent,7,1169
+person:email:konstantin.volenbovskyi@umantis.com,email:konstantin.volenbovskyi@umantis.com,Konstantin Volenbovskyi,konstantin.volenbovskyi@umantis.com,,1,29
+person:email:korey@builder.io,email:korey@builder.io,Korey Kassir,korey@builder.io,,12,2614
+person:gh:lukasulc,gh:lukasulc,Luka Šulc,68392977+lukasulc@users.noreply.github.com,lukasulc,1,0
+person:email:madison@builder.io,email:madison@builder.io,Madison Dickson,madison@builder.io | madison@mjkd.dev,,6,2093
+person:email:marcin.szumski@umantis.com,email:marcin.szumski@umantis.com,Marcin Szumski,marcin.szumski@umantis.com,,36,6304
+person:gh:zuchka,gh:zuchka,matt abrams,37156449+zuchka@users.noreply.github.com | zuchka@users.noreply.github.com,zuchka,31,3211
+person:gh:moaaz12-web,gh:moaaz12-web,Moaaz Siddiqui,80547044+moaaz12-web@users.noreply.github.com,moaaz12-web,1,1049
+person:email:linazhao@google.com,email:linazhao@google.com,Na Li,linazhao@google.com,,1,82
+person:email:naveen@greyparrots.co.in,email:naveen@greyparrots.co.in,Naveen Kumar,naveen@greyparrots.co.in,,4,1855079
+person:email:nefodov.nazar@proton.me,email:nefodov.nazar@proton.me,Nazar Nefodov,nefodov.nazar@proton.me,,4,4107
+person:gh:nicyoong,gh:nicyoong,Nic,73386479+nicyoong@users.noreply.github.com,nicyoong,1,85
+person:email:oleksii.mitrov.abacus@gmail.com,email:oleksii.mitrov.abacus@gmail.com,Oleksii Mitrov,oleksii.mitrov.abacus@gmail.com,,2,906568
+person:email:peter.vanhee@gmail.com,email:peter.vanhee@gmail.com,Peter Vanhee,peter.vanhee@gmail.com,,1,230
+person:gh:vinhphamai,gh:vinhphamai,Pham Quang Vinh VNU,115690131+vinhphamai@users.noreply.github.com,vinhphamai,1,51
+person:email:praveenkumarpranjal09@gmail.com,email:praveenkumarpranjal09@gmail.com,Praveen Kumar Pranjal,praveenkumarpranjal09@gmail.com,,1,89
+person:email:deepak1.ramachandran@gmail.com,email:deepak1.ramachandran@gmail.com,prdeepak,deepak1.ramachandran@gmail.com,,4,312
+person:email:purushotam.thakur@coforge.com,email:purushotam.thakur@coforge.com,Purushotam Thakur,purushotam.thakur@coforge.com | purusotam.thakur@coforge.com,,94,157558
+person:email:marc.elser+renovate@umantis.com,email:marc.elser+renovate@umantis.com,renovatebot runner,marc.elser+renovate@umantis.com,,97,34
+person:email:actions@github.com,email:actions@github.com,reporadar-bot,actions@github.com,,738,24065
+person:gh:nordbyte,gh:nordbyte,Ricardo,322585+nordbyte@users.noreply.github.com,nordbyte,7,917
+person:gh:robomwm,gh:robomwm,RoboMWM,robomwm@users.noreply.github.com,robomwm,1,26
+person:email:me@sami.website,email:me@sami.website,Sami Jaber,me@sami.website,,2,15
+person:email:jsduncan98@gmail.com,email:jsduncan98@gmail.com,Shannon Duncan,jsduncan98@gmail.com,,1,390
+"person:email:shashank.saxena@coforge,com","email:shashank.saxena@coforge,com",shash,"shashank.saxena@coforge,com",,11,689
+person:email:shashank2577@gmail.com,email:shashank2577@gmail.com,Shashank,shashank2577@gmail.com,,37,24540
+person:gh:shashank2577,gh:shashank2577,Shashank2577,86758641+shashank2577@users.noreply.github.com,shashank2577,961,523687
+person:email:safeguarddevtz@taazaa.com,email:safeguarddevtz@taazaa.com,Shashank2577,safeguarddevtz@taazaa.com,Shashank2577,1,1795
+person:gh:shashanksaxena-tz,gh:shashanksaxena-tz,shashanksaxena-tz,231244063+shashanksaxena-tz@users.noreply.github.com,shashanksaxena-tz,535,188575
+person:email:shiva.kumar@coforge.com,email:shiva.kumar@coforge.com,Shiva Kumar,shiva.kumar@coforge.com | shivakmr018@gmail.com,,107,49738
+person:gh:shomix,gh:shomix,shomix,100691266+shomix@users.noreply.github.com,shomix,9,1891
+person:email:sidmohanty11@gmail.com,email:sidmohanty11@gmail.com,Sidharth Mohanty,sidmohanty11@gmail.com,,4,2013
+person:email:sterling.chin@gmail.com,email:sterling.chin@gmail.com,Sterling Chin,sterling.chin@gmail.com,,35,9334
+person:email:steve@builder.io,email:steve@builder.io,Steve Sewell,sewell.steve@gmail.com | steve@builder.io,,793,1588623
+person:gh:sumit4codes,gh:sumit4codes,Sumit,146418453+sumit4codes@users.noreply.github.com,sumit4codes,1,54
+person:email:tashfene@gmail.com,email:tashfene@gmail.com,tashfeenahmed,tashfene@gmail.com,,81,18690
+person:email:tazrifraim@gmail.com,email:tazrifraim@gmail.com,Tazrif Raim,tazrifraim@gmail.com,,1,437
+person:email:deadcow@archlinux.com.br,email:deadcow@archlinux.com.br,Thiago Freitas,deadcow@archlinux.com.br,,1,71
+person:email:tibor.gemes@umantis.com,email:tibor.gemes@umantis.com,Tibor Gémes,tibor.gemes@umantis.com,,107,12101
+person:gh:tushar49,gh:tushar49,Tushar49,78557049+tushar49@users.noreply.github.com,tushar49,4,99
+person:email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,email:ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-15-137.ap-south-1.compute.internal,,26,15804
+person:email:ubuntu@ip-172-26-4-216.ap-south-1.compute.internal,email:ubuntu@ip-172-26-4-216.ap-south-1.compute.internal,Ubuntu,ubuntu@ip-172-26-4-216.ap-south-1.compute.internal,,1,556
+person:email:vishwas.g5@gmail.com,email:vishwas.g5@gmail.com,Vishwas,vishwas.g5@gmail.com,,79,20429
+person:email:whhone@google.com,email:whhone@google.com,Wai Hon Law,whhone@google.com,,22,830
+person:gh:ymodak,gh:ymodak,Yasir Modak,42785357+ymodak@users.noreply.github.com,ymodak,11,226
+person:email:ypang@google.com,email:ypang@google.com,Yishuang Pang,ypang@google.com,,19,742
+person:email:yuvrajsisodiya7302@gmail.com,email:yuvrajsisodiya7302@gmail.com,Yuvraj Singh Sisodiya,yuvrajsisodiya7302@gmail.com,,1,122
+person:email:z@container,email:z@container,Z User,z@container,,11,22660
+person:email:zichuanwei@google.com,email:zichuanwei@google.com,Zichuan Wei,zichuanwei@google.com,,10,362

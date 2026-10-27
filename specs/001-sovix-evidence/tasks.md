@@ -24,7 +24,7 @@ Tests cover domain invariants, not implementation mirrors. Write the specified f
 - [ ] T008 Implement transactional outbox, leased jobs, heartbeat and fencing primitives in `services/platform/src/sovix/workers/jobs.py`. Requirements: FR-004, FR-039. Depends on: T006.
 - [ ] T009 [P] Generate API clients and shared schemas; add contract drift checks against committed OpenAPI in `packages/contracts/package.json`. Requirements: NFR-011. Depends on: T001.
 - [ ] T010 Create synthetic fixtures, deterministic clock, isolated database harness and forbidden-network harness in `tests/conftest.py`. Requirements: SC-002, NFR-008. Depends on: T005, T006.
-- [ ] T011 Implement metadata allowlist and structured content-free error logging in `services/platform/src/sovix/domain/privacy.py`. Requirements: FR-016, NFR-010. Depends on: T005.
+- [ ] T011 Implement attribute allowlist (metadata plus ADR-016 session content) and structured content-free error logging in `services/platform/src/sovix/domain/privacy.py`. Requirements: FR-016, NFR-010. Depends on: T005.
 - [ ] T012 Create accessible shared tokens, form primitives and data table keyboard behavior in `packages/ui/src/index.ts`. Requirements: NFR-005, NFR-006. Depends on: T003.
 ## US1 — Historical baseline (P1, M1)
 
@@ -62,7 +62,7 @@ Independent test: execute AC-US3 in [acceptance.md](acceptance.md) with frozen f
 - [ ] T034 [US3] Implement OIDC principal mapping, workspace membership and owner transfer invariant in `services/platform/src/sovix/domain/identity.py`. Requirements: FR-013. Depends on: T033.
 - [ ] T035 [US3] Implement per-project role policy and forced RLS for API, workers and export queries in `services/platform/src/sovix/persistence/authorization.py`. Requirements: FR-014. Depends on: T034.
 - [ ] T036 [US3] Implement GitHub App installation validation, raw HMAC webhook receipt, secret references and revocation in `services/platform/src/sovix/adapters/github/installation.py`. Requirements: FR-015. Depends on: T035.
-- [ ] T037 [US3] Enforce aggregate-first ingestion and strip prompts, emails, arguments and exception text before persistence in `services/platform/src/sovix/adapters/redaction.py`. Requirements: FR-016. Depends on: T036.
+- [ ] T037 [US3] Enforce aggregate-first ingestion: secret-redact session content into its expiring store; strip emails and non-allowlisted fields before persistence in `services/platform/src/sovix/adapters/redaction.py`. Requirements: FR-016. Depends on: T036.
 - [ ] T038 [US3] Implement hosted k>=5 cohort suppression with complementary suppression and filter restrictions in `services/platform/src/sovix/analytics/suppression.py`. Requirements: FR-017. Depends on: T037.
 - [ ] T039 [US3] Implement content-free append-only audit events for identity, access, source and action changes in `services/platform/src/sovix/domain/audit.py`. Requirements: FR-018. Depends on: T038.
 - [ ] T040 [US3] Implement every US3 REST operation in contracts/operations.md with typed errors and authorization in `services/platform/src/sovix/api/workspaces.py`. Requirements: FR-013, FR-014, FR-015, FR-016, FR-017, FR-018. Depends on: T039.
@@ -182,7 +182,7 @@ Independent test: execute AC-US10 in [acceptance.md](acceptance.md) with frozen 
 - [ ] T122 Probe tenant/project isolation across APIs, RLS, queues, artifacts, caches and error responses in `tests/security/test_isolation.py`. Requirements: NFR-007. Depends on: T042, T072, T082.
 - [ ] T123 Verify canonical hashes, offline assets and blocked-network export operation in `tests/integration/test_determinism.py`. Requirements: NFR-008. Depends on: T032.
 - [ ] T124 Verify UTC half-open boundaries, named zones and DST schedule slots in `tests/integration/test_temporal.py`. Requirements: NFR-009. Depends on: T072.
-- [ ] T125 Seed canary secrets/content and assert absence across all accepted stores, logs and exports in `tests/security/test_redaction.py`. Requirements: NFR-010. Depends on: T042, T052, T082.
+- [ ] T125 Seed canary secrets/content; assert secrets absent everywhere and content absent outside the expiring session-content store in `tests/security/test_redaction.py`. Requirements: NFR-010. Depends on: T042, T052, T082.
 - [ ] T126 Enforce schema compatibility, old-client fixture support and 90-day breaking-change migration plan in `tests/contract/test_compatibility.py`. Requirements: NFR-011. Depends on: T022, T052, T112.
 - [ ] T127 Prove analytics/report generation perform zero model calls; gate optional narrative by separate budget in `tests/integration/test_no_model_calls.py`. Requirements: NFR-012. Depends on: T032, T112.
 - [ ] T128 Measure first-run offline report under five minutes on the fixed reference repository in `tests/e2e/first_run.spec.ts`. Requirements: SC-001. Depends on: T022, T032.
@@ -195,7 +195,15 @@ Independent test: execute AC-US10 in [acceptance.md](acceptance.md) with frozen 
 - [ ] T135 Perform governed-data deletion then restore drill and confirm no payload can be served or reingested in `tests/operations/test_deletion_restore.py`. Requirements: SC-008. Depends on: T082.
 - [ ] T136 Inject head changes, revoked permissions, unknown checks and response loss; prove no unauthorized/duplicate host effect in `tests/integration/test_policy_races.py`. Requirements: SC-009. Depends on: T102.
 - [ ] T137 Run opt-in three-team pilot, capture decision evidence, and assess two-team usefulness hypothesis in `docs/pilot-evaluation.md`. Requirements: SC-010. Depends on: T032, T062, T072.
-- [ ] T138 Verify release quickstart from clean machine and publish reproducible local release artifacts after release review in `docs/release-checklist.md`. Requirements: SC-001, NFR-011. Depends on: T113, T114, T115, T116, T117, T118, T119, T120, T121, T122, T123, T124, T125, T126, T127, T128, T129, T130, T131, T132, T133, T134, T135, T136, T137.
+- [ ] T138 Verify release quickstart from clean machine and publish reproducible local release artifacts after release review in `docs/release-checklist.md`. Requirements: SC-001, NFR-011. Depends on: T113, T114, T115, T116, T117, T118, T119, T120, T121, T122, T123, T124, T125, T126, T127, T128, T129, T130, T131, T132, T133, T134, T135, T136, T137, T139, T140, T141, T142, T143, T144.
+## Session content (ADR-016)
+
+- [ ] T139 [US4] Write failing fixtures for session-content capture, redaction, content_state, expiry, restore re-application and audited role-scoped reads in `tests/integration/test_session_content.py`. Requirements: FR-018, FR-020, FR-024, FR-037, FR-041, NFR-010. Depends on: T042, T052, T082.
+- [ ] T140 [US4] Implement SpanContent store with secret redaction, redaction counts and Session content_state present/partial/missing/expired in `services/platform/src/sovix/domain/session_content.py`. Requirements: FR-020, FR-024. Depends on: T139.
+- [ ] T141 [US4] Implement hard deletion of session content no later than 30 days after session end or last received span, or the shorter workspace period applied to stored content; reject spans_days not greater than session_content_days; re-apply deletion on restore before serving in `services/platform/src/sovix/workers/content_expiry.py`. Requirements: FR-037, FR-041. Depends on: T140.
+- [ ] T142 [US4] Implement session-content reads and developer-filtered session lists for self, owner, admin and granted analyst; each content read writes one owner/admin-only content-free AuditEvent or fails, and notifies no subject in `services/platform/src/sovix/api/session_content.py`. Requirements: FR-014, FR-018. Depends on: T141.
+- [ ] T143 [US4] Implement the one-time content-capture disclosure in collector install output and the workspace settings page in `apps/console/app/settings/workspace/disclosure.tsx`. Requirements: FR-019. Depends on: T142.
+- [ ] T144 [US4] Encrypt session content under per-workspace, per-session-end-day keys held in the secret manager/KMS (OS keychain in local mode) outside every database backup; write open sessions under a provisional key and re-wrap to the end-day key at session end or last received span; destroy keys at expiry or early when retention shortens; encrypt coaching model text and citation quotes under the key of their earliest-expiring cited session; restore still re-applies deletion in `services/platform/src/sovix/domain/content_keys.py`. Requirements: FR-037, FR-041, NFR-010. Depends on: T143.
 
 ## Execution and checkpoints
 

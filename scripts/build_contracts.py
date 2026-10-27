@@ -41,8 +41,14 @@ S['ImportRequest']=obj({'project_id':ID,'format':enum('sovix_v1','receipts_1_0')
 S['CollectorCreate']=obj({'connector_id':ID,'runtime':enum('codex_cli','claude_code','cursor','copilot_cli','generic_otlp'),'runtime_version':st(100),'adapter_version':st(100),'project_ids':arr(ID,1),'expires_at':DT})
 S['Collector']=obj({'id':ID,'connector_id':ID,'runtime':st(80),'runtime_version':st(100),'adapter_version':st(100),'project_ids':arr(ID),'capabilities':arr(st(120)),'status':enum('active','revoked','expired','unverified'),'expires_at':DT})
 S['CollectorSecret']=obj({'collector':ref('Collector'),'ingest_token':{'type':'string','minLength':32,'writeOnly':False},'otlp_endpoint':URI})
-S['Session']=obj({'id':ID,'project_id':ID,'repository_id':nullable(ID),'runtime':st(80),'started_at':DT,'ended_at':nullable(DT),'state':enum('open','completed','interrupted'),'model_ids':arr(st(150)),'coverage':ref('Coverage'),'tool_calls':N,'tool_errors':N})
+# Session content state (ADR-016), shared by Session and the session-content page.
+CONTENT_STATE={'content_state':enum('present','partial','missing','expired'),'content_missing_reason':nullable(enum('content_not_sent','sender_placeholder')),'content_expired_at':nullable(DT)}
+S['Session']=obj({'id':ID,'project_id':ID,'repository_id':nullable(ID),'runtime':st(80),'started_at':DT,'ended_at':nullable(DT),'state':enum('open','completed','interrupted'),'model_ids':arr(st(150)),'coverage':ref('Coverage'),'tool_calls':N,'tool_errors':N,'contributor_id':nullable(ID),'contributor_handle':nullable(st(100)),**CONTENT_STATE})
 S['Span']=obj({'id':ID,'session_id':ID,'trace_id':{'type':'string','pattern':'^[0-9a-f]{32}$'},'span_id':{'type':'string','pattern':'^[0-9a-f]{16}$'},'parent_span_id':nullable(st(16)),'kind':enum('chat','tool','agent'),'started_at':DT,'ended_at':DT,'model_id':nullable(st(150)),'tool_name':nullable(st(150)),'error_class':nullable(st(100))})
+# Session content (ADR-016): secret-redacted, hard-deleted within 30 days, never a metric/export input.
+S['SpanContent']=obj({'span_id':{**ID,'description':'Span.id, the platform UUID of the span row; not the 16-hex OTLP wire span_id'},'session_id':ID,'field':enum('gen_ai.input.messages','gen_ai.output.messages','gen_ai.tool.call.arguments','gen_ai.tool.call.result','gen_ai.conversation.name','gen_ai.system_instructions','exception.message','status.message'),'value_redacted':{'type':'string','maxLength':8388608},'truncated':BOOL,'truncated_total_bytes':nullable(N),'redaction_counts':{'type':'object','additionalProperties':N},'retention_expires_at':DT,'recorded_at':DT})
+# A content page states the session's content state, so missing, partial or expired content is never a bare empty list.
+S['SpanContentList']=obj({'session_id':ID,**CONTENT_STATE,'items':arr(ref('SpanContent')),'next_cursor':nullable(st(2000)),'as_of':DT})
 S['Link']=obj({'id':ID,'from_kind':enum('session','commit','pr','deployment','incident'),'from_id':ID,'to_kind':enum('commit','pr','deployment','incident'),'to_id':ID,'status':enum('candidate','verified','rejected','superseded'),'method':st(100),'source_revision_ids':arr(ID),'reason':st(1000),'version':N})
 S['LinkDecision']=obj({'decision':enum('verified','rejected'),'reason':st(1000),'source_revision_ids':arr(ID,1)})
 S['AllocationRow']=obj({'pr_id':nullable(ID),'weight_ppm':{'type':'integer','minimum':0,'maximum':1000000},'amount_usd':MONEY})
@@ -65,13 +71,17 @@ S['InvestigationUpdate']=obj({'status':enum('open','in_progress','resolved','dis
 S['Investigation']=obj({'id':ID,**S['InvestigationCreate']['properties'],'status':enum('open','in_progress','resolved','dismissed'),'resolution':nullable(st(2000)),'version':N})
 S['CommentCreate']=obj({'text':st(4000)})
 S['Comment']=obj({'id':ID,'investigation_id':ID,'author_id':ID,'text':st(4000),'created_at':DT})
-S['RetentionWrite']=obj({'spans_days':{'type':'integer','minimum':7,'maximum':90},'evidence_days':{'type':'integer','minimum':30,'maximum':730},'exports_days':{'type':'integer','minimum':1,'maximum':90},'audit_days':{'type':'integer','minimum':90,'maximum':730}})
+S['RetentionWrite']=obj({'spans_days':{'type':'integer','minimum':7,'maximum':90,'default':60},'session_content_days':{'type':'integer','minimum':1,'maximum':30,'default':30},'evidence_days':{'type':'integer','minimum':30,'maximum':730},'exports_days':{'type':'integer','minimum':1,'maximum':90},'audit_days':{'type':'integer','minimum':90,'maximum':730}})
+# Span metadata must outlive session content (ADR-016): spans_days > session_content_days, both counted from session end.
+S['RetentionWrite']['description']='spans_days MUST exceed session_content_days so session metadata outlives its content; both clocks start at session end, or the last received span if it never finalizes (ADR-016). A violating request is rejected with 422 and changes nothing.'
+S['RetentionWrite']['allOf']=[{'if':{'properties':{'session_content_days':{'const':n}},'required':['session_content_days']},'then':{'properties':{'spans_days':{'exclusiveMinimum':n}}}} for n in range(7,31)]
 S['Retention']=obj({**S['RetentionWrite']['properties'],'version':N})
 S['DeletionCreate']=obj({'project_id':ID,'confirmation_name':st(120),'reason':st(1000)})
 S['Deletion']=obj({'id':ID,'project_id':ID,'state':enum('queued','fencing','purging','completed','retrying','failed'),'requested_at':DT,'completed_at':nullable(DT)})
 S['Health']=obj({'state':enum('healthy','degraded','unavailable'),'queue_age_seconds':N,'ingestion_lag_seconds':N,'active_jobs':N,'failed_jobs_24h':N,'last_success_at':nullable(DT)})
 S['Limits']=obj({'repositories_limit':N,'repositories_used':N,'daily_spans_limit':N,'daily_spans_used':N,'reset_at':DT,'export_bytes_limit':N})
-S['Audit']=obj({'id':ID,'actor_id':nullable(ID),'action':st(100),'resource_id':ID,'result':st(100),'occurred_at':DT})
+S['Audit']=obj({'id':ID,'actor_id':nullable(ID),'action':st(100),'resource_id':ID,'subject_contributor_id':nullable(ID),'returned_ids':arr(ID),'result':st(100),'occurred_at':DT})
+S['Audit']['description']='resource_id is the requested resource. A session-content or coaching read request, including an empty or denied one, writes exactly one event naming the subject, with returned_ids listing the session or finding IDs it returned (0..n) (ADR-016).'
 S['DeploymentCreate']=obj({'connector_id':ID,'external_id':st(200),'repository_id':ID,'revision_sha':SHA,'environment':enum('production','staging','development'),'service_key':st(200),'status':enum('in_progress','succeeded','failed','canceled'),'started_at':DT,'completed_at':nullable(DT)})
 S['Deployment']=obj({'id':ID,**S['DeploymentCreate']['properties'],'source_revision_id':ID})
 S['IncidentCreate']=obj({'connector_id':ID,'external_id':st(200),'service_key':st(200),'severity':enum('critical','high','medium','low'),'impact_started_at':nullable(DT),'detected_at':DT,'recovered_at':nullable(DT),'deployment_ids':arr(ID),'link_status':enum('candidate','verified')})
@@ -117,7 +127,7 @@ def listref(name):
 O={'openapi':'3.1.1','info':{'title':'Sovix Evidence API','version':'1.0.0','description':'Design contract, not a running API. Semantics and authorization: contracts/README.md and security.md. API responses are typed resources; collections are cursor envelopes. All private resource checks are server-side.'},'servers':[{'url':'http://127.0.0.1:8000','description':'Planned local profile; requires local bearer secret'}],'security':[{'BearerAuth':[]}],'paths':{},'components':{'schemas':S,'securitySchemes':{'BearerAuth':{'type':'http','scheme':'bearer','bearerFormat':'JWT or local secret'},'CollectorToken':{'type':'http','scheme':'bearer','description':'Ingest-only scoped collector credential'},'GitHubSignature':{'type':'apiKey','in':'header','name':'X-Hub-Signature-256','description':'HMAC-SHA256 over original request bytes; not a static API key'}}}}
 W='/v1/workspaces/{workspace_id}'
 ops=[]
-def op(path,method,oid,summary,output=None,body=None,status='200',roles='owner,admin,analyst,viewer',story='US2',paginate=False,etag=False,security=None):
+def op(path,method,oid,summary,output=None,body=None,status='200',roles='owner,admin,analyst,viewer',story='US2',paginate=False,etag=False,security=None,self_access=False):
  params=[]
  import re
  for p in re.findall(r'{([^}]+)}',path):params.append({'name':p,'in':'path','required':True,'schema':st(150) if p=='metric_id' else ID})
@@ -133,7 +143,8 @@ def op(path,method,oid,summary,output=None,body=None,status='200',roles='owner,a
  d={'operationId':oid,'summary':summary,'tags':[story],'x-story':story,'x-roles':roles.split(','),'parameters':params,'responses':responses}
  if body:d['requestBody']={'required':True,'content':{'application/json':{'schema':ref(body)}}}
  if security is not None:d['security']=security
- O['paths'].setdefault(path,{})[method]=d;ops.append((oid,method.upper(),path,story,roles))
+ if self_access:d['x-self-access']=True
+ O['paths'].setdefault(path,{})[method]=d;ops.append((oid,method.upper(),path,story,roles+(' (viewer: own sessions only)' if self_access else '')))
 op('/v1/me','get','getIdentity','Current authenticated principal','Identity',story='US3')
 op('/v1/workspaces','get','listWorkspaces','List permitted workspaces','Workspace',paginate=True,story='US3')
 op('/v1/workspaces','post','createWorkspace','Create workspace and owner membership','Workspace','WorkspaceCreate','201',story='US3')
@@ -160,9 +171,10 @@ op(W+'/jobs/{job_id}/cancel','post','cancelJob','Request cooperative cancellatio
 op(W+'/collectors','get','listCollectors','List collector capabilities','Collector',paginate=True,roles='owner,admin',story='US4')
 op(W+'/collectors','post','createCollector','Issue scoped ingestion credential once','CollectorSecret','CollectorCreate','201',roles='owner,admin',story='US4')
 op(W+'/collectors/{collector_id}/revoke','post','revokeCollector','Revoke ingestion credential','Collector','Reason',roles='owner,admin',story='US4')
-op(W+'/sessions','get','listSessions','List metadata-only observed sessions','Session',paginate=True,roles='owner,admin,analyst',story='US4')
-op(W+'/sessions/{session_id}','get','getSession','Read session metadata','Session',roles='owner,admin,analyst',story='US4')
-op(W+'/sessions/{session_id}/spans','get','listSessionSpans','Read metadata-only spans','Span',paginate=True,roles='owner,admin,analyst',story='US4')
+op(W+'/sessions','get','listSessions','List observed session metadata and content state','Session',paginate=True,roles='owner,admin,analyst,viewer',story='US4',self_access=True)
+op(W+'/sessions/{session_id}','get','getSession','Read session metadata','Session',roles='owner,admin,analyst,viewer',story='US4',self_access=True)
+op(W+'/sessions/{session_id}/spans','get','listSessionSpans','Read span metadata without content','Span',paginate=True,roles='owner,admin,analyst,viewer',story='US4',self_access=True)
+op(W+'/sessions/{session_id}/content','get','listSessionContent','Read secret-redacted session content until expiry; every read audited','SpanContent',paginate=True,roles='owner,admin,analyst,viewer',story='US4',self_access=True)
 op(W+'/links','get','listLinks','List evidence associations','Link',paginate=True,roles='owner,admin,analyst',story='US5')
 op(W+'/links/{link_id}/decision','post','adjudicateLink','Append verified or rejected link revision','Link','LinkDecision','201',roles='owner,admin,analyst',story='US5',etag=True)
 op(W+'/allocations','post','createAllocation','Append conserving allocation version','Allocation','AllocationCreate','201',roles='owner,admin,analyst',story='US5')
@@ -232,6 +244,10 @@ op(W+'/action-control','get','getActionControl','Read workspace action kill-swit
 op(W+'/action-control','put','setActionControl','Explicitly enable or disable workspace host actions','ActionControl','ActionControlWrite',roles='owner,admin',story='US9',etag=True)
 op(W+'/billing-allocations','post','createBillingAllocation','Record separate evidence-backed billing allocation','BillingAllocation','BillingCreate','201',roles='owner,admin',story='US5')
 op(W+'/billing-allocations','get','listBillingAllocations','Read financial bases separately from estimates','BillingAllocation',paginate=True,roles='owner,admin,analyst',story='US5')
+O['paths'][W+'/sessions/{session_id}/content']['get']['description']='ADR-016. Reads one session\'s secret-redacted content; no route lists or exports content in bulk. Readers: owner and admin; an analyst when the session\'s project is inside their grant; the developer whose linked contributor identity produced the session, at any internal role (x-self-access: viewer is self-only). Another person\'s session for an internal viewer, and every session for an is_external principal, return the same 404 as a nonexistent session. Access does not depend on individual_attribution_enabled. Each request, including an empty or denied one, writes exactly one AuditEvent (actor, subject handle, requested resource_id, returned_ids, time); the event is readable by owner/admin only, carries no content and is never shown or sent to the subject; if that write fails the read fails. The page states content_state, content_missing_reason and content_expired_at; items are in span order. Semantics: contracts/README.md.'
+O['paths'][W+'/sessions']['get']['description']='Without contributor_id the list holds only the caller\'s own sessions (x-self-access: viewer is self-only). Owner, admin and analysts within their grant list another developer\'s sessions only by naming that one developer in contributor_id, one developer per request, and see contributor_handle (ADR-016 Clarifications); unattributed=true instead lists sessions with no linked developer, unaudited because it is metadata only. Session metadata stays readable after content expires. Results are never ordered by a metric (FR-090).'
+O['paths'][W+'/retention']['put']['description']='Rejects spans_days not greater than session_content_days with 422. A shorter session_content_days applies to content already stored (ADR-016).'
+for path in ['/sessions/{session_id}','/sessions/{session_id}/spans']:O['paths'][W+path]['get']['description']='x-self-access: a viewer reads only sessions their linked contributor identity produced (ADR-016 rule 3).'
 O['paths'][W+'/report-definitions/{report_definition_id}/schedule']['put']['description']='If-Match is the parent ReportDefinition ETag on both create and update. Transaction bumps parent revision and schedule version; fetch parent again after mutation.'
 # Explicit filtering contract on list endpoints; private scope selection remains authorization-bound.
 for path,methods in O['paths'].items():
@@ -242,6 +258,10 @@ for path,methods in O['paths'].items():
    for name in ['q','topic','language']:d['parameters'].append({'name':name,'in':'query','schema':st(200)})
   else:
    for name,sc in [('project_id',ID),('repository_id',ID),('start',DT),('end',DT)]:d['parameters'].append({'name':name,'in':'query','schema':sc})
+# ADR-016: content readers may filter the session list to one developer.
+O['paths'][W+'/sessions']['get']['parameters'].append({'name':'contributor_id','in':'query','schema':ID,'description':'Required to list another developer\'s sessions; exactly one developer per request. Omitted: only the caller\'s own sessions.'})
+O['paths'][W+'/sessions']['get']['parameters'].append({'name':'unattributed','in':'query','schema':BOOL,'description':'true lists sessions with no linked developer (contributor_id null, no handle): metadata only, not a person view, not audited. Same readers; cannot be combined with contributor_id (400).'})
+O['paths'][W+'/sessions']['get']['x-one-developer-per-request']=True
 # Non-REST receiver routes retain their native protocol envelopes.
 O['paths']['/v1/traces']={'post':{'operationId':'ingestOtlpTraces','summary':'OTLP/HTTP trace intake; native protocol, not a REST job','tags':['US4'],'x-story':'US4','x-roles':['collector'],'security':[{'CollectorToken':[]}],'requestBody':{'required':True,'content':{'application/json':{'schema':{'type':'object','description':'ExportTraceServiceRequest from the pinned opentelemetry-proto contract. JSON follows OTLP JSON encoding, not custom REST encoding.','properties':{'resourceSpans':{'type':'array','items':{'type':'object'}}},'additionalProperties':False}},'application/x-protobuf':{'schema':{'type':'string','format':'binary'}}}},'responses':{'200':{'description':'ExportTraceServiceResponse; partial rejection counts if applicable. Client must not retry partial success.','content':{'application/json':{'schema':obj({'partialSuccess':obj({'rejectedSpans':{'type':'string','pattern':'^[0-9]+$'},'errorMessage':{'type':'string','maxLength':1000}},[])},[])},'application/x-protobuf':{'schema':{'type':'string','format':'binary'}}}},**{str(c):{'description':desc} for c,desc in [(400,'Invalid OTLP payload; no retry'),(401,'Missing/invalid collector token'),(403,'Revoked or wrong-scope collector'),(413,'Decompressed payload too large'),(429,'Retry with Retry-After'),(502,'Retryable gateway error'),(503,'Retryable unavailable receiver'),(504,'Retryable timeout')]}}}}
 O['paths']['/webhooks/github']={'post':{'operationId':'receiveGithubWebhook','summary':'Verify raw signature then persist delivery before acknowledgement','tags':['US1'],'x-story':'US1','x-roles':['github'],'security':[{'GitHubSignature':[]}],'parameters':[{'name':'X-GitHub-Delivery','in':'header','required':True,'schema':st(100)},{'name':'X-GitHub-Event','in':'header','required':True,'schema':st(100)}],'requestBody':{'required':True,'content':{'application/json':{'schema':{'type':'object','description':'GitHub event-specific payload validated after raw-byte HMAC; unknown actions acknowledged and safely ignored.'}}}},'responses':{'202':{'description':'Durably received or previously received; internal worker handles retries'},'400':{'description':'Malformed payload'},'401':{'description':'Invalid signature'},'413':{'description':'Payload too large'},'503':{'description':'Cannot durably persist; retry/reconcile required'}}}}

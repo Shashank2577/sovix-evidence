@@ -33,7 +33,7 @@ under `/local` and omits sign-in, membership and hosted connector administration
 | `/w/{workspace}/investigations/{id}` | Finding follow-up history, assignee and resolution | Owner, admin, analyst; viewer read-only |
 | `/w/{workspace}/sources` | Repositories, connectors, collectors and freshness | Owner, admin; analyst reads granted source health |
 | `/w/{workspace}/jobs/{id}` | Progress, attempts, safe errors and cancellation | Creator or owner/admin in scope |
-| `/w/{workspace}/settings/{members,retention,quotas,audit}` | Access and lifecycle administration | Owner/admin according to authorization matrix |
+| `/w/{workspace}/settings/{members,retention,quotas,audit}` | Access and lifecycle administration; states once that session content is captured and kept up to 30 days (ADR-016) | Owner/admin according to authorization matrix |
 | `/radar`, `/radar/{owner}/{repo}` | Isolated public search, profile and local watchlist | Public; no private workspace navigation |
 
 An inaccessible workspace, project, snapshot, job or export returns the same not-found page;
@@ -47,11 +47,11 @@ view is bookmarkable. Opening a metric and returning restores those filters and 
   deletion, quotas, audit, policy activation and report workflows.
 - **Admin** sees the same operational surfaces except last-owner removal/transfer. Destructive
   project deletion states its project scope, irreversibility and downloaded-export limit.
-- **Analyst** sees granted projects, raw permitted evidence, definitions, generation,
+- **Analyst** sees granted projects, raw permitted evidence and session content, definitions, generation,
   investigations and link/allocation adjudication. Member, connector, retention and policy
   activation controls are absent rather than disabled.
 - **Viewer** sees authorized aggregate snapshots, coverage, sanitized evidence and existing
-  downloads. Editing and identity-level controls are absent. Suppression is never relaxed.
+  downloads. Editing, identity-level controls and other people's session content are absent. Suppression is never relaxed.
 - **Operator** uses a separate operational surface containing health, rates, safe codes and
   counts only; report values, source text and customer payloads are unavailable.
 - **Local user** has single-owner capabilities for local scan, import, reports and exports;
@@ -90,9 +90,9 @@ are visually and textually separate from verified links and excluded from verifi
 
 Evidence rows show only allowlisted fields and link to the authorized source when available.
 An expired or revoked source remains as an unavailable reference with a reason code. The
-verification panel exposes normalized inputs and digests, but never credentials, source
-bodies, prompts, names, emails, tool I/O or local paths. Viewer drill-down uses sanitized
-aggregate records; export rendering applies the same authorization and suppression policy.
+verification panel exposes normalized inputs and digests, but never credentials, source bodies,
+prompts, names, emails, tool I/O or local paths; no metric reads session content (ADR-016). Viewer
+drill-down uses sanitized aggregate records, never session content; exports apply the same policy.
 
 ## Visualization Rules
 

@@ -184,6 +184,15 @@ class Finding:
     metric_id: str = ""
     scope_key: str = ""
     value_display: str = ""
+    # The rule that fired, as data rather than prose. `title`, `detail` and
+    # `action` are generated from contributor-authored text and do not
+    # survive publication, so on a published page these three are most of
+    # what a finding has left. They are what lets the card say what actually
+    # fired instead of asserting a threshold nobody can check. Absent on a
+    # report from a collector that predates them, hence the defaults.
+    rule_comparison: str = ""
+    rule_threshold: float | None = None
+    ruleset_version: str = ""
 
 
 @dataclass(frozen=True)
@@ -394,6 +403,12 @@ def load(path: str | Path) -> Report:
                 metric_id=str(f.get("metric_id") or ""),
                 scope_key=str(f.get("scope_key") or ""),
                 value_display=str(f.get("value_display") or ""),
+                rule_comparison=str(f.get("rule_comparison") or ""),
+                rule_threshold=(
+                    None if f.get("rule_threshold") is None
+                    else float(f["rule_threshold"])
+                ),
+                ruleset_version=str(f.get("ruleset_version") or ""),
             )
             for f in (raw.get("headlines") or ())
         ),

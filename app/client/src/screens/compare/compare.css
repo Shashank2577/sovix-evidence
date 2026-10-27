@@ -1,0 +1,394 @@
+/**
+ * Compare (SPEC §5.7, §7.1).
+ *
+ * The table is a grid whose column count comes from `--cmp-columns`, so two and
+ * three columns are the same markup and the same rules. §7.1 forbids horizontal
+ * page scroll, and this screen exists only at ≥781px: the metric column gives
+ * ground at each step down so the value columns never fall below legibility, and
+ * long metric labels wrap rather than pushing the page sideways.
+ */
+
+/* ------------------------------------------------------------ slot row */
+
+.cmp-slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 28px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cmp-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.cmp-slot__label {
+  color: var(--text-3);
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.cmp-slot__controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cmp-slot__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  max-width: 260px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.cmp-slot__trigger:hover {
+  border-color: var(--accent-border-hover);
+  box-shadow: var(--shadow-switcher-hover);
+}
+.cmp-slot__trigger svg:last-child {
+  color: var(--ornament);
+}
+.cmp-slot__name {
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmp-slot__remove {
+  width: 28px;
+  height: 28px;
+}
+.cmp-slot__remove:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.cmp-slot__unknown {
+  max-width: 260px;
+  margin: 0;
+  color: var(--sev-warning);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.cmp-slot__add {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 12px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  transition:
+    color 0.18s ease,
+    border-color 0.18s ease;
+}
+.cmp-slot__add:hover {
+  color: var(--accent-ink);
+  border-color: var(--accent-border-hover);
+}
+
+/* Disabled rows in the slot picker: already a column somewhere else. */
+.scope-tree button.scope-row:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ------------------------------------------------------------ gaps strip */
+
+.cmp-gaps {
+  margin-top: 26px;
+  padding: 19px 21px 17px;
+  background: var(--surface-tint);
+  border-radius: 9px;
+}
+.cmp-gaps__caption {
+  max-width: 72ch;
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.cmp-gaps__none {
+  margin: 12px 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+}
+.cmp-gaps__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 11px;
+  margin: 15px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cmp-gap {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.cmp-gap__label {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.cmp-gap__ends {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cmp-gap__end {
+  color: var(--text-2);
+  font: 10px/1.5 "DM Mono", monospace;
+}
+
+/* ----------------------------------------------------------------- table */
+
+.cmp-table {
+  --cmp-metric-width: minmax(190px, 1.5fr);
+  margin-top: 26px;
+}
+
+.cmp-head,
+.cmp-row {
+  display: grid;
+  grid-template-columns:
+    var(--cmp-metric-width)
+    repeat(var(--cmp-columns, 2), minmax(96px, 1fr));
+  gap: 12px;
+  align-items: center;
+}
+
+/* The column names follow the reader down a 57-row table. `top` clears the app's
+   own sticky top bar (64px at every width this screen exists at) and the z-index
+   stays below it, so the two never overlap. */
+.cmp-head {
+  position: sticky;
+  top: 64px;
+  z-index: 2;
+  padding: 11px 14px;
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+.cmp-head__metric {
+  color: var(--text-3);
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.cmp-head__column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cmp-head__name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmp-head__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  color: var(--sev-critical);
+  font-size: 9px;
+  line-height: 1.4;
+}
+.cmp-head__retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent-ink);
+  background: transparent;
+  font-size: 9px;
+  font-weight: 700;
+}
+.cmp-head__loading {
+  color: var(--text-3);
+  font-size: 9px;
+}
+
+.cmp-family {
+  margin-top: 26px;
+}
+.cmp-family__head {
+  padding: 0 14px;
+}
+.cmp-family__head h3 {
+  margin: 0;
+  color: var(--text);
+  font: 600 17px/1.15 "Fraunces", Georgia, serif;
+  letter-spacing: -0.028em;
+}
+.cmp-family__head p {
+  max-width: 76ch;
+  margin: 6px 0 0;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.cmp-row {
+  min-height: 48px;
+  padding: 7px 14px;
+  border-top: 1px solid var(--border-soft);
+  transition: background 0.16s ease;
+}
+.cmp-family__head + .cmp-row {
+  margin-top: 10px;
+}
+.cmp-row:hover,
+.cmp-row:focus-within {
+  background: var(--surface-hover);
+}
+.cmp-row[data-open="true"] {
+  background: var(--surface-tint);
+}
+
+/* The anchor column. Sticky is inert without a scrolling ancestor, which is the
+   normal case here (§7.1 forbids one); it earns its keep under browser zoom,
+   where the viewport itself can scroll sideways. */
+.cmp-row__metric {
+  position: sticky;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.cmp-row__label {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.cmp-row__id {
+  color: var(--text-3);
+  font: 9px "DM Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
+.cmp-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.cmp-cell__value {
+  color: var(--text);
+  font: 700 12px "DM Mono", monospace;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.cmp-cell__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cmp-cell__skeleton {
+  display: block;
+  width: 54px;
+  height: 11px;
+  background: var(--surface-3);
+  border-radius: 4px;
+}
+.cmp-cell--pending {
+  min-height: 22px;
+}
+
+/* ------------------------------------------------------------- absences */
+
+.cmp-absent {
+  margin-top: 8px;
+  padding: 0 14px;
+}
+.cmp-absent > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 0;
+  color: var(--text-3);
+  font: 700 10px "DM Mono", monospace;
+  cursor: pointer;
+  list-style: none;
+}
+.cmp-absent > summary::-webkit-details-marker {
+  display: none;
+}
+.cmp-absent > summary::before {
+  content: "▸";
+  color: var(--ornament);
+}
+.cmp-absent[open] > summary::before {
+  content: "▾";
+}
+.cmp-absent > summary:hover {
+  color: var(--accent-ink);
+}
+.cmp-absent__rows {
+  margin: 0 -14px;
+}
+
+/* ---------------------------------------------------------------- states */
+
+.cmp-empty,
+.cmp-mobile {
+  margin-top: 22px;
+}
+.cmp-mobile__hint {
+  margin: 18px 0 -4px;
+  color: var(--text-3);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------ responsive */
+
+/* §7.1 compact. The metric column gives ground first so three value columns
+   stay legible; labels wrap rather than the page scrolling (§7.1). */
+@media (max-width: 1080px) {
+  .cmp-table {
+    --cmp-metric-width: minmax(132px, 1.1fr);
+  }
+  .cmp-head,
+  .cmp-row {
+    gap: 9px;
+    padding-inline: 8px;
+  }
+  .cmp-family__head,
+  .cmp-absent {
+    padding-inline: 8px;
+  }
+  .cmp-absent__rows {
+    margin: 0 -8px;
+  }
+}

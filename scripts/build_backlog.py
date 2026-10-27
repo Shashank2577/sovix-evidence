@@ -15,7 +15,7 @@ g=add('Implement authenticated request context, typed Problem responses, idempot
 h=add('Implement transactional outbox, leased jobs, heartbeat and fencing primitives','services/platform/src/sovix/workers/jobs.py',['FR-004','FR-039'],deps=[f],acceptance=['AC-US1','AC-US7'])
 i=add('Generate API clients and shared schemas; add contract drift checks against committed OpenAPI','packages/contracts/package.json',['NFR-011'],deps=[a],parallel=True,acceptance=['AC-NFR011'])
 j=add('Create synthetic fixtures, deterministic clock, isolated database harness and forbidden-network harness','tests/conftest.py',['SC-002','NFR-008'],deps=[e,f],acceptance=['AC-SC002','AC-NFR008'])
-k=add('Implement metadata allowlist and structured content-free error logging','services/platform/src/sovix/domain/privacy.py',['FR-016','NFR-010'],deps=[e],acceptance=['AC-US3','AC-NFR010'])
+k=add('Implement attribute allowlist (metadata plus ADR-016 session content) and structured content-free error logging','services/platform/src/sovix/domain/privacy.py',['FR-016','NFR-010'],deps=[e],acceptance=['AC-US3','AC-NFR010'])
 l=add('Create accessible shared tokens, form primitives and data table keyboard behavior','packages/ui/src/index.ts',['NFR-005','NFR-006'],deps=[c],acceptance=['AC-NFR005','AC-NFR006'])
 foundation=[g,h,i,j,k,l]
 # Six concrete implementation work items per story, in FR order; supporting route/UI work follows.
@@ -40,7 +40,7 @@ STORIES={
 ('Implement OIDC principal mapping, workspace membership and owner transfer invariant','services/platform/src/sovix/domain/identity.py'),
 ('Implement per-project role policy and forced RLS for API, workers and export queries','services/platform/src/sovix/persistence/authorization.py'),
 ('Implement GitHub App installation validation, raw HMAC webhook receipt, secret references and revocation','services/platform/src/sovix/adapters/github/installation.py'),
-('Enforce aggregate-first ingestion and strip prompts, emails, arguments and exception text before persistence','services/platform/src/sovix/adapters/redaction.py'),
+('Enforce aggregate-first ingestion: secret-redact session content into its expiring store; strip emails and non-allowlisted fields before persistence','services/platform/src/sovix/adapters/redaction.py'),
 ('Implement hosted k>=5 cohort suppression with complementary suppression and filter restrictions','services/platform/src/sovix/analytics/suppression.py'),
 ('Implement content-free append-only audit events for identity, access, source and action changes','services/platform/src/sovix/domain/audit.py')],
 'services/platform/src/sovix/api/workspaces.py','apps/console/app/settings/workspace/page.tsx'),
@@ -126,7 +126,7 @@ NFR=[
 ('Probe tenant/project isolation across APIs, RLS, queues, artifacts, caches and error responses','tests/security/test_isolation.py',[3,6,7]),
 ('Verify canonical hashes, offline assets and blocked-network export operation','tests/integration/test_determinism.py',[2]),
 ('Verify UTC half-open boundaries, named zones and DST schedule slots','tests/integration/test_temporal.py',[6]),
-('Seed canary secrets/content and assert absence across all accepted stores, logs and exports','tests/security/test_redaction.py',[3,4,7]),
+('Seed canary secrets/content; assert secrets absent everywhere and content absent outside the expiring session-content store','tests/security/test_redaction.py',[3,4,7]),
 ('Enforce schema compatibility, old-client fixture support and 90-day breaking-change migration plan','tests/contract/test_compatibility.py',[1,4,10]),
 ('Prove analytics/report generation perform zero model calls; gate optional narrative by separate budget','tests/integration/test_no_model_calls.py',[2,10])]
 for n,(desc,path,stories) in enumerate(NFR,1):add(desc,path,[f'NFR-{n:03}'],deps=[ends[x] for x in stories],acceptance=[f'AC-NFR{n:03}'],phase='Release quality')
@@ -142,7 +142,19 @@ SC=[
 ('Inject head changes, revoked permissions, unknown checks and response loss; prove no unauthorized/duplicate host effect','tests/integration/test_policy_races.py',[9]),
 ('Run opt-in three-team pilot, capture decision evidence, and assess two-team usefulness hypothesis','docs/pilot-evaluation.md',[2,5,6])]
 for n,(desc,path,stories) in enumerate(SC,1):add(desc,path,[f'SC-{n:03}'],deps=[ends[x] for x in stories],acceptance=[f'AC-SC{n:03}'],phase='Release quality')
-add('Verify release quickstart from clean machine and publish reproducible local release artifacts after release review','docs/release-checklist.md',['SC-001','NFR-011'],deps=[x['id'] for x in T if x['phase'] in ['Integration','Release quality']],acceptance=['AC-SC001','AC-NFR011'],phase='Release quality')
+release=add('Verify release quickstart from clean machine and publish reproducible local release artifacts after release review','docs/release-checklist.md',['SC-001','NFR-011'],deps=[x['id'] for x in T if x['phase'] in ['Integration','Release quality']],acceptance=['AC-SC001','AC-NFR011'],phase='Release quality')
+# ADR-016 session content work, appended so existing task IDs stay stable; the release task also depends on it.
+SESSION_CONTENT='Session content (ADR-016)'
+prev=add('Write failing fixtures for session-content capture, redaction, content_state, expiry, restore re-application and audited role-scoped reads','tests/integration/test_session_content.py',['FR-018','FR-020','FR-024','FR-037','FR-041','NFR-010'],'US4',[ends[3],ends[4],ends[7]],acceptance=['AC-US3','AC-US4','AC-US7','AC-NFR010'],phase=SESSION_CONTENT)
+content=[prev]
+for description,path,requirements,acceptance in [
+ ('Implement SpanContent store with secret redaction, redaction counts and Session content_state present/partial/missing/expired','services/platform/src/sovix/domain/session_content.py',['FR-020','FR-024'],['AC-US4']),
+ ('Implement hard deletion of session content no later than 30 days after session end or last received span, or the shorter workspace period applied to stored content; reject spans_days not greater than session_content_days; re-apply deletion on restore before serving','services/platform/src/sovix/workers/content_expiry.py',['FR-037','FR-041'],['AC-US7']),
+ ('Implement session-content reads and developer-filtered session lists for self, owner, admin and granted analyst; each content read writes one owner/admin-only content-free AuditEvent or fails, and notifies no subject','services/platform/src/sovix/api/session_content.py',['FR-014','FR-018'],['AC-US3','AC-US4']),
+ ('Implement the one-time content-capture disclosure in collector install output and the workspace settings page','apps/console/app/settings/workspace/disclosure.tsx',['FR-019'],['AC-US4']),
+ ('Encrypt session content under per-workspace, per-session-end-day keys held in the secret manager/KMS (OS keychain in local mode) outside every database backup; write open sessions under a provisional key and re-wrap to the end-day key at session end or last received span; destroy keys at expiry or early when retention shortens; encrypt coaching model text and citation quotes under the key of their earliest-expiring cited session; restore still re-applies deletion','services/platform/src/sovix/domain/content_keys.py',['FR-037','FR-041','NFR-010'],['AC-US7','AC-NFR010'])]:
+ prev=add(description,path,requirements,'US4',[prev],acceptance=acceptance,phase=SESSION_CONTENT);content.append(prev)
+T[int(release[1:])-1]['depends_on'] += content
 trace={'schema_version':'1.0','status':'planned','tasks':T,'requirements':{}}
 for t in T:
  for r in t['requirements']:

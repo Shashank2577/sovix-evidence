@@ -13,6 +13,7 @@ data, not just hand-built fixtures.
 from __future__ import annotations
 
 import copy
+import os
 from pathlib import Path
 
 import pytest
@@ -20,9 +21,17 @@ import pytest
 from sovix_render import leaktests, model, pseudonym, redact
 from sovix_render.pseudonym import Pseudonymizer
 
+# These integration tests are the only ones that see a real Receipts report,
+# and they are the ones that catch fields nobody anticipated. The path was
+# previously hard-coded to a per-session scratchpad directory, so the moment
+# that session ended the tests began skipping silently — which is how a raw
+# GitHub login in `process.reviewer_load_top_share`'s inputs survived
+# redaction unnoticed. The path now falls back to `out/report.json`, which is
+# where `receipts collect` writes, so a developer who has collected anything
+# runs them without configuring anything.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
 REAL_REPORT_PATH = Path(
-    "/private/tmp/claude-502/-Users-shashanksaxena-Documents-ChatGPT-Git-ai"
-    "/b96f9913-3b27-4af0-b87a-82c2bd64c581/scratchpad/real-axios/report.json"
+    os.environ.get("SOVIX_REAL_REPORT", _REPO_ROOT / "out" / "report.json")
 )
 
 
@@ -474,7 +483,16 @@ pytestmark_real_report = pytest.mark.skipif(
 @pytestmark_real_report
 def test_real_report_redacts_and_publishes_under_both_profiles():
     report = model.load(REAL_REPORT_PATH)
-    assert len(report.contributor_scope_keys) == 108  # k>=5 cohort is real
+    # The count is whatever the available report carries; what matters is
+    # that it is a real cohort comfortably over the k>=5 floor, so the
+    # pseudonymous branch below is exercising the path that keeps
+    # contributor scopes rather than the one that suppresses them. Pinning
+    # an exact number tied this test to one particular fixture.
+    cohort = len(report.contributor_scope_keys)
+    assert cohort >= redact.K_ANONYMITY_MIN, (
+        f"fixture has only {cohort} contributor scope(s); this test needs a "
+        f"cohort at or above the k>={redact.K_ANONYMITY_MIN} floor"
+    )
 
     for profile in ("pseudonymous", "aggregate_only"):
         pz = Pseudonymizer(key=pseudonym.derive_key(b"\x13" * 32))
@@ -486,7 +504,7 @@ def test_real_report_redacts_and_publishes_under_both_profiles():
         if profile == "aggregate_only":
             assert new_report.contributor_scope_keys == ()
         else:
-            assert len(new_report.contributor_scope_keys) == 108
+            assert len(new_report.contributor_scope_keys) == cohort
 
 
 @pytestmark_real_report
@@ -551,3 +569,115 @@ def test_real_report_top_contributor_name_does_not_leak_via_formula():
             assert top_name not in (m.formula or "")
             assert top_name not in (m.display or "")
             assert "top_name" not in m.inputs
+
+
+@pytestmark_real_report
+def test_real_report_no_unrecognised_string_input_survives():
+    """A string-valued `Metric.inputs` field is published only if it is on
+    `_SAFE_STRING_INPUT_KEYS`.
+
+    This is the regression for a real leak. The exporter ships
+    `process.reviewer_load_top_share` with a `top_reviewer` input holding a
+    raw GitHub login ("TerryHowe"). `_IDENTITY_INPUT_KEYS` is a denylist and
+    did not name it, so the login survived redaction at all 653 scopes.
+    Nothing published it only because the renderer of the day printed numeric
+    inputs and skipped strings — a rendering accident, not a privacy
+    property, and the next renderer to show a metric's inputs would have
+    leaked it.
+
+    Asserting on `top_reviewer` alone would rebuild the same denylist in the
+    test. The assertion is therefore structural: every surviving string must
+    be on the allowlist, so a field added upstream tomorrow fails here.
+    """
+    report = model.load(REAL_REPORT_PATH)
+    pz = Pseudonymizer(key=pseudonym.derive_key(b"\x21" * 32))
+    new_report, _ = redact.redact_report(
+        report, profile="pseudonymous", pseudo=pz,
+        public_repos=frozenset({"axios/axios"}),
+    )
+
+    allowed = redact._SAFE_STRING_INPUT_KEYS | {"top_handle", "contributor_handle"}
+    surviving = {
+        key
+        for sr in new_report.scopes.values()
+        for m in sr.metrics
+        for key, value in (m.inputs or {}).items()
+        if isinstance(value, str)
+    }
+    assert surviving <= allowed, (
+        f"unrecognised string input(s) survived redaction: "
+        f"{sorted(surviving - allowed)}. Either the value is safe and belongs "
+        f"in _SAFE_STRING_INPUT_KEYS with a comment saying why, or it is not "
+        f"and the allowlist is doing its job."
+    )
+
+
+@pytestmark_real_report
+def test_real_report_reviewer_login_does_not_survive():
+    """The specific value that leaked, asserted by value.
+
+    The structural test above would pass if `top_reviewer` were added to the
+    allowlist by mistake. This one names the failure so that mistake is loud.
+    """
+    report = model.load(REAL_REPORT_PATH)
+    logins = {
+        str(m.inputs["top_reviewer"])
+        for sr in report.scopes.values()
+        for m in sr.metrics
+        if isinstance((m.inputs or {}).get("top_reviewer"), str)
+        and m.inputs["top_reviewer"] not in ("", "none")
+    }
+    if not logins:
+        pytest.skip("fixture carries no top_reviewer logins to check")
+
+    pz = Pseudonymizer(key=pseudonym.derive_key(b"\x22" * 32))
+    new_report, _ = redact.redact_report(
+        report, profile="pseudonymous", pseudo=pz,
+        public_repos=frozenset({"axios/axios"}),
+    )
+    for sr in new_report.scopes.values():
+        for m in sr.metrics:
+            rendered = " ".join(
+                [m.formula or "", m.display or ""]
+                + [str(v) for v in (m.inputs or {}).values()]
+            )
+            for login in logins:
+                assert login not in rendered, (
+                    f"reviewer login {login!r} survived in {m.id}"
+                )
+
+
+@pytestmark_real_report
+def test_published_finding_keeps_the_rule_that_fired_it():
+    """A published finding must be able to show what actually fired.
+
+    `title`, `detail` and `action` are generated from contributor-authored
+    text and are stripped at publication, which once left the published page
+    rendering seven findings as empty headings. The remedy is not to put the
+    prose back -- it cannot be mechanically proven safe -- but to publish the
+    rule as data: a comparison operator, a numeric threshold, and a digest of
+    the rule table. None of the three can carry an identity, and together
+    they make the threshold arguable rather than merely asserted.
+    """
+    report = model.load(REAL_REPORT_PATH)
+    if not report.findings:
+        pytest.skip("fixture fired no findings")
+    if not any(f.rule_comparison for f in report.findings):
+        pytest.skip("fixture predates the collector shipping rule data")
+
+    pz = Pseudonymizer(key=pseudonym.derive_key(b"\x23" * 32))
+    new_report, _ = redact.redact_report(
+        report, profile="pseudonymous", pseudo=pz,
+        public_repos=frozenset({"axios/axios"}),
+    )
+
+    for before, after in zip(report.findings, new_report.findings):
+        # The prose is gone, as it must be.
+        assert after.title == "" and after.detail == "" and after.action == ""
+        # What fired is not.
+        assert after.rule_comparison == before.rule_comparison
+        assert after.rule_threshold == before.rule_threshold
+        assert after.ruleset_version == before.ruleset_version
+        assert after.rule_comparison in {"<", ">"}
+        assert isinstance(after.rule_threshold, float)
+        assert after.ruleset_version.startswith("r")

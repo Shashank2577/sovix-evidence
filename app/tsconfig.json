@@ -1,0 +1,28 @@
+{
+  "include": ["client/src/**/*", "shared/**/*", "server/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "compilerOptions": {
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
+    "noEmit": true,
+    /* Without an explicit target TypeScript assumes ES5, which contradicts
+       `lib: esnext` below and rejects ordinary iterator spreading — legal in
+       every browser this app supports, and in the Vite build output. The
+       omission only surfaced once a test spread a `matchAll` result. */
+    "target": "ES2022",
+    "module": "ESNext",
+    "strict": true,
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "jsx": "preserve",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@/*": ["./client/src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  }
+}

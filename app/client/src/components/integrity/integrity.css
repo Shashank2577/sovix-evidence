@@ -1,0 +1,351 @@
+/*
+ * Styles for the integrity primitives (SPEC §6.2–§6.7, §6.15).
+ *
+ * Kept beside the components rather than in `index.css` so this chunk owns its own
+ * surface. Every colour is a token from §2.3 — nothing here invents a value, and
+ * both themes come from the token layer for free.
+ */
+
+/* ---------------------------------------------------------- §6.2 TierBadge */
+
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  font: 700 9px/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tier-fg);
+}
+
+.tier-badge--boxed {
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: var(--tier-bg);
+}
+
+.tier-badge__dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--tier-fg);
+}
+
+/* The confidence half is the same ink at a lower weight: it reads as a qualifier
+   of the tier rather than a second, competing label. */
+.tier-badge__confidence {
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  opacity: 0.9;
+}
+
+.tier-badge--measured { --tier-fg: var(--tier-measured); --tier-bg: var(--tier-measured-bg); }
+.tier-badge--proxy    { --tier-fg: var(--tier-proxy);    --tier-bg: var(--tier-proxy-bg); }
+.tier-badge--inferred { --tier-fg: var(--tier-inferred); --tier-bg: var(--tier-inferred-bg); }
+
+.tier-badge-group {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+
+.tier-badge__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.tier-badge__toggle:focus-visible,
+.status-pill__toggle:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 5px;
+}
+
+/* The legend sentence is a disclosure, not a tooltip: pointer, touch, keyboard and
+   print all reach it (§0.1 — nothing hover-only). */
+.tier-badge__legend,
+.status-pill__footnote {
+  display: block;
+  max-width: 34ch;
+  margin: 0;
+  color: var(--text-2);
+  font: 400 11px/1.45 "DM Sans", sans-serif;
+}
+
+/* --------------------------------------------------------- §6.3 FloorFigure */
+
+.floor-figure {
+  font: inherit;
+  color: inherit;
+}
+
+/* Real text, not a pseudo-element: the `≥` has to survive copy-paste and print
+   (§6.3). The non-breaking space keeps it welded to the figure across a wrap. */
+.floor-figure__prefix {
+  font: inherit;
+  color: var(--text-2);
+}
+
+/* -------------------------------------------------------- §6.4 NotAvailable */
+
+.not-available {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-3);
+}
+
+.not-available__icon {
+  flex: none;
+  align-self: center;
+  color: var(--ornament);
+}
+
+/* Italic DM Sans against the mono numerals everywhere else: at a glance this can
+   not be mistaken for a reading (§6.4). */
+.not-available__label {
+  font-family: "DM Sans", sans-serif;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.not-available--chip .not-available__label { font-size: 12px; line-height: 1.2; }
+.not-available--stat .not-available__label { font-size: 17px; line-height: 1.25; }
+
+.not-available--stat { flex-direction: column; align-items: flex-start; gap: 4px; }
+.not-available--stat .not-available__figure { display: inline-flex; align-items: center; gap: 6px; }
+
+.not-available__reason {
+  display: block;
+  max-width: 46ch;
+  margin: 0;
+  color: var(--text-3);
+  font: 400 11px/1.5 "DM Sans", sans-serif;
+}
+
+/* ----------------------------------------------------- §6.6 SampleBreakdown */
+
+.sample-breakdown { display: grid; gap: 14px; }
+
+.sample-breakdown__tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sample-tile {
+  padding: 10px 11px;
+  border-radius: 9px;
+  background: var(--surface-3);
+}
+
+.sample-tile__label {
+  display: block;
+  color: var(--text-3);
+  font: 700 8px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.sample-tile__value {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font: 700 19px/1 "DM Mono", ui-monospace, monospace;
+}
+
+.sample-breakdown__unit {
+  margin: -6px 0 0;
+  color: var(--text-3);
+  font: 400 11px/1.4 "DM Sans", sans-serif;
+}
+
+.coverage-bar {
+  position: relative;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.coverage-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--tier-measured);
+}
+
+.sample-breakdown__coverage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  color: var(--text-2);
+  font: 500 11px/1.2 "DM Sans", sans-serif;
+}
+
+.sample-breakdown__coverage-head b {
+  color: var(--text);
+  font: 700 11px/1.2 "DM Mono", ui-monospace, monospace;
+}
+
+.sample-breakdown__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 8px;
+  color: var(--text-3);
+  font: 500 10px/1.2 "DM Sans", sans-serif;
+}
+
+.sample-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+
+.sample-legend-item__dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 2px;
+}
+
+.sample-legend-item--included .sample-legend-item__dot { background: var(--tier-measured); }
+.sample-legend-item--excluded .sample-legend-item__dot { background: var(--surface-3); border: 1px solid var(--border); }
+
+.sample-breakdown__heading {
+  margin: 0 0 2px;
+  color: var(--text-3);
+  font: 700 8px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.exclusion-lines { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+
+/* Reasons are sentences. They wrap; they are never truncated — the sentence is the
+   point of the line (§6.6). */
+.exclusion-line {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9px;
+  color: var(--text-2);
+  font: 400 12px/1.5 "DM Sans", sans-serif;
+}
+
+.exclusion-line__dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+}
+
+.exclusion-line--unaccounted .exclusion-line__dot { background: transparent; border-style: dashed; }
+
+.exclusion-line__reason { overflow-wrap: anywhere; }
+
+.exclusion-line__count {
+  color: var(--text);
+  font: 500 12px/1.5 "DM Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sample-breakdown__empty {
+  margin: 0;
+  color: var(--text-3);
+  font: 400 12px/1.5 "DM Sans", sans-serif;
+}
+
+/* ---------------------------------------------------- §6.7 CoverageBarCell */
+
+.coverage-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.coverage-cell__bar { flex: none; }
+
+.coverage-cell__display {
+  color: var(--text);
+  font: 500 12px/1.2 "DM Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------- §6.15 StatusPill */
+
+.status-pill-group {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--status-bg);
+  color: var(--status-fg);
+  font: 700 9px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-pill__dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--status-fg);
+}
+
+.status-pill--critical { --status-fg: var(--sev-critical); --status-bg: var(--sev-critical-bg); }
+.status-pill--watch    { --status-fg: var(--sev-warning);  --status-bg: var(--sev-warning-bg); }
+.status-pill--healthy  { --status-fg: var(--tier-measured); --status-bg: var(--tier-measured-bg); }
+
+.status-pill__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font: 500 10px/1.2 "DM Sans", sans-serif;
+}
+
+.status-pill__rule {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-3);
+  font: 400 10px/1.4 "DM Mono", ui-monospace, monospace;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .tier-badge__legend,
+  .status-pill__footnote {
+    animation: integrity-disclose 180ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+}
+
+@keyframes integrity-disclose {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
+}

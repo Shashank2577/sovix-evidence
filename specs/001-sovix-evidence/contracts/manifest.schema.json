@@ -1347,6 +1347,63 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 9007199254740991
+        },
+        "contributor_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "contributor_handle": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_state": {
+          "type": "string",
+          "enum": [
+            "present",
+            "partial",
+            "missing",
+            "expired"
+          ]
+        },
+        "content_missing_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "content_not_sent",
+                "sender_placeholder"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_expired_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -1360,7 +1417,12 @@
         "model_ids",
         "coverage",
         "tool_calls",
-        "tool_errors"
+        "tool_errors",
+        "contributor_id",
+        "contributor_handle",
+        "content_state",
+        "content_missing_reason",
+        "content_expired_at"
       ],
       "additionalProperties": false
     },
@@ -1460,6 +1522,157 @@
         "model_id",
         "tool_name",
         "error_class"
+      ],
+      "additionalProperties": false
+    },
+    "SpanContent": {
+      "type": "object",
+      "properties": {
+        "span_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Span.id, the platform UUID of the span row; not the 16-hex OTLP wire span_id"
+        },
+        "session_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "field": {
+          "type": "string",
+          "enum": [
+            "gen_ai.input.messages",
+            "gen_ai.output.messages",
+            "gen_ai.tool.call.arguments",
+            "gen_ai.tool.call.result",
+            "gen_ai.conversation.name",
+            "gen_ai.system_instructions",
+            "exception.message",
+            "status.message"
+          ]
+        },
+        "value_redacted": {
+          "type": "string",
+          "maxLength": 8388608
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "truncated_total_bytes": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "redaction_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "retention_expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "span_id",
+        "session_id",
+        "field",
+        "value_redacted",
+        "truncated",
+        "truncated_total_bytes",
+        "redaction_counts",
+        "retention_expires_at",
+        "recorded_at"
+      ],
+      "additionalProperties": false
+    },
+    "SpanContentList": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "content_state": {
+          "type": "string",
+          "enum": [
+            "present",
+            "partial",
+            "missing",
+            "expired"
+          ]
+        },
+        "content_missing_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "content_not_sent",
+                "sender_placeholder"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "content_expired_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SpanContent"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "session_id",
+        "content_state",
+        "content_missing_reason",
+        "content_expired_at",
+        "items",
+        "next_cursor",
+        "as_of"
       ],
       "additionalProperties": false
     },
@@ -2561,7 +2774,14 @@
         "spans_days": {
           "type": "integer",
           "minimum": 7,
-          "maximum": 90
+          "maximum": 90,
+          "default": 60
+        },
+        "session_content_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 30
         },
         "evidence_days": {
           "type": "integer",
@@ -2581,11 +2801,471 @@
       },
       "required": [
         "spans_days",
+        "session_content_days",
         "evidence_days",
         "exports_days",
         "audit_days"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "spans_days MUST exceed session_content_days so session metadata outlives its content; both clocks start at session end, or the last received span if it never finalizes (ADR-016). A violating request is rejected with 422 and changes nothing.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 7
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 7
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 8
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 8
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 9
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 9
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 10
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 10
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 11
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 11
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 12
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 12
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 13
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 13
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 14
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 14
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 15
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 15
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 16
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 16
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 17
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 17
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 18
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 18
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 19
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 19
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 20
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 20
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 21
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 21
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 22
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 22
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 23
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 23
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 24
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 24
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 25
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 25
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 26
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 26
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 27
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 27
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 28
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 28
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 29
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 29
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "session_content_days": {
+                "const": 30
+              }
+            },
+            "required": [
+              "session_content_days"
+            ]
+          },
+          "then": {
+            "properties": {
+              "spans_days": {
+                "exclusiveMinimum": 30
+              }
+            }
+          }
+        }
+      ]
     },
     "Retention": {
       "type": "object",
@@ -2593,7 +3273,14 @@
         "spans_days": {
           "type": "integer",
           "minimum": 7,
-          "maximum": 90
+          "maximum": 90,
+          "default": 60
+        },
+        "session_content_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 30
         },
         "evidence_days": {
           "type": "integer",
@@ -2618,6 +3305,7 @@
       },
       "required": [
         "spans_days",
+        "session_content_days",
         "evidence_days",
         "exports_days",
         "audit_days",
@@ -2820,6 +3508,26 @@
           "type": "string",
           "format": "uuid"
         },
+        "subject_contributor_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "returned_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
         "result": {
           "type": "string",
           "minLength": 1,
@@ -2835,10 +3543,13 @@
         "actor_id",
         "action",
         "resource_id",
+        "subject_contributor_id",
+        "returned_ids",
         "result",
         "occurred_at"
       ],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "description": "resource_id is the requested resource. A session-content or coaching read request, including an empty or denied one, writes exactly one event naming the subject, with returned_ids listing the session or finding IDs it returned (0..n) (ADR-016)."
     },
     "DeploymentCreate": {
       "type": "object",

@@ -124,6 +124,40 @@ _IDENTITY_INPUT_KEYS = frozenset({
     "name", "top_name", "author", "contributor", "login", "handle", "email",
 })
 
+# The set above is a denylist, and this module's whole argument (see the
+# docstring on LT-06) is that a denylist is defeated by the next field
+# someone adds upstream. It was: `process.reviewer_load_top_share` ships a
+# `top_reviewer` input carrying a raw GitHub login, which matches none of
+# the names above and survived redaction at every scope. Nothing rendered
+# it, so nothing leaked — but "the current renderer happens not to print
+# this field" is not a privacy property.
+#
+# So string-valued inputs are allowlisted instead, and the denylist above is
+# kept only for the key-renaming path (`top_name` -> `top_name_handle`) that
+# a permitted contributor breakdown still uses. A number is always safe to
+# print: it is a count or a ratio, and it cannot carry a name. A string is
+# only printed if it is on this list, which means a field added upstream
+# tomorrow is dropped rather than published.
+_SAFE_STRING_INPUT_KEYS = frozenset({
+    "branch",     # a default branch name; not identity-bearing
+    "mix",        # "chore 27%, fix 22%, ..." — a composition summary
+    "top_tool",   # an AI tool name, e.g. "Claude Code"
+    "value",      # a metric's own text value, e.g. "15:00-16:00 local"
+    "floor",      # "not available"
+    "measured",   # "not available"
+    "unit",
+    "window",
+})
+
+# Values that are placeholders rather than data. An unrecognised string
+# input is registered as an identity so `_scrub_text` can remove it from an
+# interpolated formula (see `_collect_plaintexts`); registering one of these
+# would make the scrubber replace an ordinary English word everywhere it
+# appeared in the report.
+_NON_IDENTITY_SENTINELS = frozenset({
+    "none", "n/a", "na", "unknown", "not available", "not collected", "-",
+})
+
 
 def _date_only(ts: object) -> str | None:
     """Coarsen an ISO 8601 timestamp to its calendar date.
@@ -379,9 +413,24 @@ def _collect_plaintexts(report: Report, r: _Redactor) -> None:
             r.pseudo.handle_for(login)
         for m in sr.metrics:
             for key, value in (m.inputs or {}).items():
+                if not isinstance(value, str) or not value.strip():
+                    continue
                 base = key[: -len("_name")] if key.endswith("_name") else key
-                if (key in _IDENTITY_INPUT_KEYS or base in _IDENTITY_INPUT_KEYS) and value:
-                    r.pseudo.handle_for(str(value))
+                named = key in _IDENTITY_INPUT_KEYS or base in _IDENTITY_INPUT_KEYS
+                if not named and key in _SAFE_STRING_INPUT_KEYS:
+                    continue
+                if value.strip().lower() in _NON_IDENTITY_SENTINELS:
+                    continue
+                # Either a key this module knows carries an identity, or a
+                # string input it does not recognise at all. Both are
+                # registered, because the leak this closes was the second
+                # kind: `process.reviewer_load_top_share` interpolates a raw
+                # GitHub login into its own `formula`
+                # ("194 reviews by cubic-dev-ai / 1,502 reviews = 12.9%"),
+                # and `_scrub_text` can only remove an identity it was told
+                # about before the transform pass ran. Dropping the field
+                # was not enough: the name was already in the prose.
+                r.pseudo.handle_for(value)
             for src in m.sources:
                 author = (src.values or {}).get("author")
                 if author:
@@ -597,9 +646,18 @@ def _redact_inputs(inputs: dict, r: _Redactor) -> dict:
             else:
                 r._bump(CLASS_CONTRIBUTOR_IDENTITY)
             continue
-        if isinstance(value, str) and _EMAIL_RE.search(value):
-            r._bump(CLASS_CONTRIBUTOR_IDENTITY)
-            continue
+        if isinstance(value, str):
+            if _EMAIL_RE.search(value):
+                r._bump(CLASS_CONTRIBUTOR_IDENTITY)
+                continue
+            if key not in _SAFE_STRING_INPUT_KEYS:
+                # Fails closed: an unrecognised string input is dropped and
+                # counted, never published on the assumption it is harmless.
+                # It was also registered as an identity in
+                # `_collect_plaintexts`, so any copy of it interpolated into
+                # a formula or display string is already scrubbed.
+                r._bump(CLASS_FREE_TEXT)
+                continue
         out[key] = value
     return out
 
@@ -669,6 +727,15 @@ def _redact_finding(f: Finding, r: _Redactor) -> Finding | None:
         metric_id=f.metric_id,
         scope_key=f.scope_key,
         value_display=f.value_display,
+        # Structured, not free text: a comparison operator, a numeric
+        # threshold and a digest of the rule table. None of the three can
+        # carry an identity, and together they are what makes a published
+        # threshold arguable instead of merely asserted. Dropping them would
+        # leave the published finding with nothing to stand on, which is the
+        # state that produced empty finding cards in the first place.
+        rule_comparison=f.rule_comparison,
+        rule_threshold=f.rule_threshold,
+        ruleset_version=f.ruleset_version,
     )
 
 

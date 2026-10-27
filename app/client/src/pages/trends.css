@@ -1,0 +1,411 @@
+/**
+ * Trends (SPEC §5.5, §7.4, §7.5) — chunk C10.
+ *
+ * Everything below is layout and type; no colour is invented here. The tokens are
+ * C0's, and the two tinted chips reuse the same tier/severity pairs the rest of the
+ * product uses, so a green on this screen is the green the reader has already met.
+ *
+ * The width story, in one place:
+ *   - ≥781px  two series cards per row; the comparison is a five-column table.
+ *   - ≤780px  one series card per row (the charts drop to 180px themselves);
+ *             the table narrows but keeps all five columns.
+ *   - ≤510px  the comparison stops being a table and becomes fourteen cards —
+ *             five numeric columns at 390px is below legibility, and the card keeps
+ *             every figure the row carried (§7.4).
+ */
+
+.tr-section {
+  min-width: 0;
+}
+
+.tr-lede {
+  max-width: 640px;
+  margin: 12px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------ the series */
+
+.tr-series-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 17px;
+}
+
+.tr-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 16px 17px 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+
+.tr-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.tr-card-heading {
+  min-width: 0;
+}
+
+.tr-card-label {
+  display: block;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+a.tr-card-label:hover {
+  color: var(--accent-ink);
+}
+
+.tr-card-latest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 9px;
+  margin: 7px 0 0;
+}
+
+.tr-card-latest strong {
+  color: var(--text);
+  font: 700 22px/1 "DM Mono", monospace;
+  letter-spacing: -0.05em;
+}
+
+.tr-card-latest small {
+  color: var(--text-3);
+  font-size: 9px;
+}
+
+/* Words, not a figure: an absent series is never drawn as a zero (§6.4). */
+.tr-card-absent {
+  margin: 7px 0 0;
+  color: var(--text-3);
+  font: italic 11px/1.45 "DM Sans", sans-serif;
+}
+
+/* ----------------------------------------------------------- the heatmap */
+
+.tr-heatmap-panel {
+  margin-top: 17px;
+  padding: 20px 22px 16px;
+}
+
+.tr-temporal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 14px 0 0;
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.tr-temporal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 5px 10px;
+  color: var(--text-2);
+  font-size: 11px;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  transition: border-color 0.18s cubic-bezier(0.23, 1, 0.32, 1),
+    color 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.tr-temporal-link:hover,
+.tr-temporal-link:active {
+  color: var(--accent-ink);
+  border-color: var(--accent-border-hover);
+}
+
+.tr-temporal-link strong {
+  color: var(--text);
+  font: 700 11px "DM Mono", monospace;
+  letter-spacing: -0.02em;
+}
+
+/* -------------------------------------------------------- before / after */
+
+.tr-split-intro {
+  margin-top: 17px;
+  padding: 20px 22px 18px;
+}
+
+.tr-split-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 11px;
+}
+
+.tr-split-kicker {
+  color: var(--text-3);
+  font: 700 9px/1.3 "DM Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tr-split-dates strong {
+  color: var(--text);
+  font: 700 15px "DM Mono", monospace;
+  letter-spacing: -0.03em;
+}
+
+.tr-split-halves {
+  color: var(--text-3);
+  font: 10px "DM Mono", monospace;
+}
+
+/*
+  The collector's own sentence, in the quote treatment the product uses for prose
+  that is not ours. Printed whole: a trimmed reason would let the split read as
+  more deliberate than it was.
+*/
+.tr-split-reason {
+  margin: 14px 0 0;
+  padding: 13px 15px 13px 17px;
+  color: var(--accent-ink);
+  font: italic 12px/1.6 "DM Sans", sans-serif;
+  background: var(--surface-tint);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 7px 7px 0;
+}
+
+.tr-split-caveat {
+  max-width: 640px;
+  margin: 13px 0 0;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.tr-table {
+  margin-top: 14px;
+}
+
+.tr-row {
+  display: grid;
+  grid-template-columns:
+    minmax(150px, 1.7fr) minmax(72px, 1fr) minmax(72px, 1fr)
+    minmax(84px, 1fr) minmax(64px, 0.7fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 6px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.tr-row--head {
+  min-height: 27px;
+  padding-top: 0;
+  padding-bottom: 6px;
+  color: var(--text-3);
+  border-top: 0;
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.tr-cell-metric {
+  min-width: 0;
+}
+
+.tr-metric-label {
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+a.tr-metric-label:hover {
+  color: var(--accent-ink);
+}
+
+.tr-figure {
+  color: var(--text-2);
+  font: 700 11px "DM Mono", monospace;
+  letter-spacing: -0.02em;
+}
+
+/* Absence, in words and in italic, so it cannot be mistaken for a figure. */
+.tr-absent {
+  color: var(--text-3);
+  font: italic 10px/1.4 "DM Sans", sans-serif;
+}
+
+.tr-change {
+  display: inline-flex;
+  align-items: center;
+  font: 700 11px "DM Mono", monospace;
+  letter-spacing: -0.02em;
+}
+
+/* After `.tr-change`, so the words win over the mono figure treatment. */
+.tr-change--absent {
+  color: var(--text-3);
+  font: italic 10px/1.4 "DM Sans", sans-serif;
+}
+
+/*
+  §5.1.4: colour only where the metric states a direction, and never as the only
+  channel — the sign is written on every chip, so the figure survives greyscale.
+*/
+.tr-change--neutral {
+  color: var(--text-2);
+}
+
+.tr-change--with {
+  color: var(--tier-measured);
+}
+
+.tr-change--against {
+  color: var(--sev-warning);
+}
+
+/* A chip, like every other confidence in the product — text, never colour alone. */
+.tr-confidence {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  color: var(--text-2);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.03em;
+  background: var(--surface-3);
+  border-radius: 20px;
+}
+
+.tr-split-footer {
+  margin: 16px 0 0;
+  color: var(--text-3);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------- the 390px card form */
+
+.tr-change-cards {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tr-change-card {
+  padding: 13px 14px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.tr-change-card h4 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tr-change-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 9px 0 0;
+}
+
+.tr-change-arrow {
+  color: var(--ornament);
+  font: 11px "DM Mono", monospace;
+}
+
+.tr-change-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+}
+
+/*
+  The two half-labels are stated once above the list rather than on all fourteen
+  cards: repeated on every card they are noise, and the split date is already on
+  the intro card directly above.
+*/
+.tr-change-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 14px 0 0;
+  color: var(--text-3);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.tr-skeleton {
+  margin-top: 17px;
+}
+
+/* ------------------------------------------------------------ reflow */
+
+@media (max-width: 1080px) {
+  .tr-row {
+    grid-template-columns:
+      minmax(120px, 1.6fr) minmax(64px, 1fr) minmax(64px, 1fr)
+      minmax(76px, 1fr) minmax(56px, 0.7fr);
+    gap: 8px;
+  }
+}
+
+@media (max-width: 780px) {
+  .tr-series-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tr-heatmap-panel {
+    padding: 16px 14px 13px;
+  }
+
+  .tr-split-intro {
+    padding: 16px 16px 15px;
+  }
+
+  /* §7.6 — a row is a touch target before it is a row. */
+  .tr-row {
+    min-height: 52px;
+    grid-template-columns:
+      minmax(104px, 1.5fr) minmax(58px, 1fr) minmax(58px, 1fr)
+      minmax(68px, 1fr) minmax(48px, 0.6fr);
+  }
+}
+
+@media (max-width: 510px) {
+  .tr-card {
+    padding: 14px 13px 11px;
+  }
+
+  .tr-card-latest strong {
+    font-size: 20px;
+  }
+
+  .tr-temporal-link {
+    min-height: 44px;
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+}

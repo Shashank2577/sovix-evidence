@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sovix — Your work</title>
+<script>(function(){try{var t=localStorage.getItem("sovix-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230071e3'/%3E%3Ctext x='16' y='22' font-family='-apple-system,Helvetica,Arial,sans-serif' font-weight='600' font-size='17' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  .loadwrap { display: flex; justify-content: center; margin-top: 14px; }
+</style>
+</head>
+<body>
+<main id="main" class="container"></main>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const { C, esc, el, header, colophon, revealInit, fmtVal, scopeOrder, scopeLabel, metricHref,
+          toolbarTitle, toolbarSearch, statusSlot } = window.SVX;
+  header("work");
+  const main = document.getElementById("main");
+
+  /* ---------- build the record index: every source cited anywhere ---------- */
+  const records = new Map();
+  const scopeMetaByKey = new Map(scopeOrder().map((s) => [s.key, s]));
+  Object.keys(C.scopes).forEach((skey) => {
+    const sc = C.scopes[skey];
+    sc.metrics.forEach((m) => {
+      (m.sources || []).forEach((s) => {
+        const id = s.url || (s.kind + s.ref + (s.repo || ""));
+        const v = s.values || {};
+        if (!records.has(id)) {
+          records.set(id, {
+            kind: s.kind, ref: s.ref, repo: s.repo || "", url: s.url || "",
+            title: v.title || v.subject || v.workflow || "",
+            detail0: s.detail || "",
+            author: v.author || "",
+            date: (s.occurred_at || "").slice(0, 10),
+            apps: [],
+          });
+        }
+        const r = records.get(id);
+        if (!r.title) r.title = v.title || v.subject || v.workflow || "";
+        if (!r.author && v.author) r.author = v.author;
+        if (!r.apps.some((a) => a.mid === m.id && a.skey === skey))
+          r.apps.push({ mid: m.id, mlabel: m.label, skey, detail: s.detail || "" });
+      });
+    });
+  });
+  const kindRank = { pull_request: 0, commit: 1, branch: 2, file: 3, release: 4, dataset: 5 };
+  const all = [...records.values()].sort((a, b) =>
+    (kindRank[a.kind] ?? 9) - (kindRank[b.kind] ?? 9) || (b.date || "").localeCompare(a.date || ""));
+  const kinds = [...new Set(all.map((r) => r.kind))];
+  const metricCount = new Set(all.flatMap((r) => r.apps.map((a) => a.mid))).size;
+  toolbarTitle("Your work", fmtVal(all.length) + " cited records");
+
+  /* ---------- head ---------- */
+  main.appendChild(el(`<section class="masthead" style="padding-bottom:12px">
+    <div class="overline accent rv">Your work · the evidence, from the ground</div>
+    <h1 class="rv d1">Find your pull request. See exactly where it counts.</h1>
+    <p class="dek rv d2">Every figure in this report is built from real records. <em>${esc(fmtVal(all.length))} of them are cited by name</em> across ${esc(fmtVal(metricCount))} metrics. Search for your pull request, commit, or branch and see each figure it appears in — and as what. Pull requests and commits come first, newest first. Nothing here ranks people, and nothing here is a score.</p>
+  </section>`));
+
+  /* ---------- controls: toolbar search + a scope bar of kinds ---------- */
+  const controls = el(`<div class="flexrow rv" style="margin:2px 0 12px">
+    <div class="kindbar" role="group" aria-label="Filter by record kind">
+      <span class="klab">Show</span>
+      ${kinds.map((k) => { const l = k.replace(/_/g, " "); const pl = l === "branch" ? "branches" : l + "s"; return `<button type="button" class="scopetog" data-kind="${esc(k)}" aria-pressed="false">${esc(pl)}</button>`; }).join("")}
+    </div>
+  </div>`);
+  main.appendChild(controls);
+
+  const listWrap = el(`<div id="list" style="margin-bottom:28px"></div>`);
+  main.appendChild(listWrap);
+
+  /* ---------- rendering ---------- */
+  const PAGE = 25;
+  let shown = PAGE;
+  let activeKinds = new Set();
+  let query = "";
+
+  function match(r) {
+    if (activeKinds.size && !activeKinds.has(r.kind)) return false;
+    if (!query) return true;
+    const hay = (r.ref + " " + r.title + " " + r.detail0 + " " + r.author + " " + r.repo).toLowerCase();
+    return query.split(/\s+/).every((t) => hay.includes(t));
+  }
+
+  const disc = `<span class="r-disc"><svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M3 1.2 8 5 3 8.8z"/></svg></span>`;
+  function recordHTML(r, animate) {
+    const appRows = r.apps.map((a) => `<div class="r-app">
+        <span><a href="${metricHref(a.mid, a.skey)}">${esc(a.mlabel)}</a>
+        <span class="in"> · ${esc(scopeLabel(a.skey))}</span></span>
+        <span class="as">${esc(a.detail)}</span>
+      </div>`).join("");
+    return `<details class="record${animate ? " rv" : ""}">
+      <summary>
+        ${disc}
+        <span><span class="r-ref">${esc(r.ref)}</span><div class="r-kind">${esc(r.kind.replace(/_/g, " "))}</div></span>
+        <span style="min-width:0"><div class="r-title">${esc(r.title || r.detail0 || r.ref)}</div>
+          <div class="r-sub">${esc(r.repo)}${r.author ? " · " + esc(r.author) : ""}${r.date ? " · " + esc(r.date) : ""}</div></span>
+        <span class="r-count">cited in ${esc(fmtVal(r.apps.length))} figure${r.apps.length === 1 ? "" : "s"}</span>
+      </summary>
+      <div class="r-body">
+        ${appRows}
+        ${r.url ? `<div class="r-app"><span><a href="${esc(r.url)}" target="_blank" rel="noopener">Open on GitHub ↗</a></span><span></span></div>` : ""}
+      </div>
+    </details>`;
+  }
+
+  function render(animate) {
+    const hits = all.filter(match);
+    const page = hits.slice(0, shown);
+    listWrap.innerHTML =
+      (page.length ? `<div class="records${animate ? " rv d1" : ""}">` + page.map((r) => recordHTML(r, false)).join("") + `</div>` : "") +
+      (hits.length === 0 ? `<div class="empty">No cited record matches — try a shorter search.</div>` : "") +
+      (hits.length > shown ? `<div class="loadwrap"><button class="push loadmore" type="button">Show ${esc(fmtVal(Math.min(PAGE, hits.length - shown)))} more of ${esc(fmtVal(hits.length))}</button></div>` : "");
+    statusSlot(
+      (query || activeKinds.size ? fmtVal(hits.length) + " of " + fmtVal(all.length) + " records" : fmtVal(all.length) + " records")
+      + " · cited across " + fmtVal(metricCount) + " metrics");
+    const lm = listWrap.querySelector(".loadmore");
+    if (lm) lm.addEventListener("click", () => { shown += PAGE; render(false); });
+    if (animate) revealInit();
+  }
+
+  const q = toolbarSearch("Search by #ref, title, author, or repository…", "Search records");
+  q.addEventListener("input", (e) => {
+    query = e.target.value.trim().toLowerCase();
+    shown = PAGE;
+    render(false);
+  });
+  controls.querySelectorAll(".kindbar button").forEach((b) => {
+    b.addEventListener("click", () => {
+      const k = b.dataset.kind;
+      if (activeKinds.has(k)) activeKinds.delete(k); else activeKinds.add(k);
+      b.setAttribute("aria-pressed", String(activeKinds.has(k)));
+      shown = PAGE;
+      render(false);
+    });
+  });
+
+  render(true);
+  colophon();
+  revealInit();
+})();
+</script>
+</body>
+</html>

@@ -6,7 +6,7 @@
 |---|---|---|
 | Access | Workspace, membership, project grants, service principals | Source identity claims |
 | Collection | Connectors, receipts, source revisions, completeness | Business conclusions |
-| Agent observation | Sessions, spans, capability coverage, usage units | PR authorship or developer performance |
+| Agent observation | Sessions, spans, expiring session content, capability coverage, usage units | PR authorship or developer performance |
 | Attribution | Evidence links, adjudication, versioned monetary allocations | Metric presentation or price-provider billing |
 | Analytics | Definitions, eligible populations, results, comparisons | Arbitrary source mutation |
 | Reporting | Definitions, snapshots, evidence bundles, investigations | Recalculation during browser rendering |
@@ -31,6 +31,9 @@
   a relationship, not proof that an agent authored every changed line.
 - **Candidate link**: A relationship needing stronger evidence; excluded from exact totals.
 - **Usage unit**: The one canonical owner of token quantities for accounting, often a turn.
+- **Session content**: A session's prompts, system instructions, responses, tool arguments/results,
+  file paths, title and raw error text; secret-redacted, hard-deleted within 30 days of session
+  end (ADR-016).
 - **Estimated equivalent cost**: Token usage priced with a versioned rate card. It is not an invoice.
 - **Allocation**: A declared distribution of a cost unit among PRs and an unallocated remainder.
 - **Snapshot**: A pinned logical view with an immutable content manifest until lifecycle deletion.
@@ -57,7 +60,8 @@
    row. Candidate associations receive zero allocation in verified views.
 10. A report cannot disclose evidence its current viewer is not allowed to see; metric totals
     built from broader scopes must not leak through drill-down or export.
-11. Deterministic metrics cannot depend on optional narrative output or source instructions.
+11. Deterministic metrics cannot depend on optional narrative output, coaching output, session
+    content or source instructions.
 12. Policy action authorization is evaluated against current state, never a stale report alone.
 
 ## State Machines
@@ -67,6 +71,7 @@
 | Connector | pending -> active; active -> degraded/revoked/disabled; degraded -> active/revoked/disabled; disabled -> pending; revoked -> pending only after new authorization |
 | Job | queued -> running/canceled; running -> succeeded/partially_succeeded/retrying/failed/cancel_requested; retrying -> running/canceled/failed; cancel_requested -> canceled or completed result if commit already passed; terminals never restart, retry creates a new job |
 | Session | open -> completed/interrupted; interrupted -> completed only with authoritative final event; late spans revise a new projection, not prior snapshots |
+| Session content | present/partial -> expired by hard deletion no later than 30 days after session end (or its last received span if never finalized); expired never returns, and restore re-applies it before serving; partial and missing record why content was not received |
 | EvidenceLink | candidate -> verified/rejected; verified/rejected -> superseded with a new immutable link revision; no in-place history edits |
 | Snapshot | building -> ready/partial/failed; ready/partial -> revoked/deleted; revoked -> deleted; published manifests never return to building |
 | Investigation | open -> in_progress/resolved/dismissed; in_progress -> resolved/dismissed; resolved/dismissed -> open with a reason |

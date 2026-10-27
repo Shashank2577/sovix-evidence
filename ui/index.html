@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sovix — The report</title>
+<script>(function(){try{var t=localStorage.getItem("sovix-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230071e3'/%3E%3Ctext x='16' y='22' font-family='-apple-system,Helvetica,Arial,sans-serif' font-weight='600' font-size='17' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<main id="main" class="container"></main>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const { C, esc, el, header, colophon, revealInit, sparkSVG, fmtVal, toolbarTitle, statusSlot,
+          metricHref, scopeHref, scopeLabel, metricAt, isFloor, displayOf, splitDisplay } = window.SVX;
+  header("report");
+  const main = document.getElementById("main");
+  const org = C.scopes[C.root_scope];
+  const F = org.facts;
+  const range = esc(F.first_commit.slice(0, 10)) + " → " + esc(F.last_commit.slice(0, 10));
+  toolbarTitle("The report", C.org_label + " · " + F.repos.length + " repositories");
+  statusSlot(fmtVal(F.commits) + " commits · " + fmtVal(F.pull_requests) + " pull requests · " + fmtVal(F.contributors) + " contributors");
+
+  /* ---------- masthead ---------- */
+  main.appendChild(el(`<section class="masthead">
+    <div class="overline accent rv">Engineering evidence · ${esc(C.org_label)}</div>
+    <h1 class="rv d1">What the repositories say, and how each figure was counted.</h1>
+    <p class="dek rv d2">${esc(F.repos.length)} repositories read commit by commit, <span class="num">${range}</span>.
+      Every number below opens to <em>its formula, its sample, what was excluded and why,</em>
+      and the real commits and pull requests behind it. No score, no grade, no ranking of people.</p>
+    <div class="facts rv d3">
+      ${[["commits", F.commits], ["pull requests", F.pull_requests], ["reviews", F.reviews],
+         ["contributors", F.contributors], ["branches", F.branches], ["weeks of history", F.span_weeks]]
+        .map(([k, v]) => `<div class="fact"><div class="v" data-countup="${esc(fmtVal(v))}">${esc(fmtVal(v))}</div><div class="k">${esc(k)}</div></div>`).join("")}
+    </div>
+  </section>`));
+
+  /* ---------- findings — a list view ---------- */
+  const sevOrder = { critical: 0, warning: 1, info: 2 };
+  const sevCls = { critical: "crit", warning: "warn", info: "info" };
+  const findings = [...C.headlines].sort((a, b) => (sevOrder[a.severity] ?? 9) - (sevOrder[b.severity] ?? 9));
+  main.appendChild(el(`<section class="section">
+    <div class="section-head rv">
+      <h2>Findings</h2>
+      <span class="note">The report's own reading of the evidence, ranked by severity. Each row opens the full working behind its number.</span>
+    </div>
+    <div class="findlist rv d1">
+      ${findings.map((h) => {
+        const m = metricAt(h.scope_key, h.metric_id);
+        const val = m ? displayOf(m) : esc(h.value_display);
+        return `<a class="frow" href="${metricHref(h.metric_id, h.scope_key)}">
+          <span class="f-main">
+            <span class="f-line"><span class="badge ${sevCls[h.severity] || "info"}"><span class="dot"></span>${esc(h.severity)}</span><span class="f-title">${esc(h.title)}</span></span>
+            <span class="f-det">${esc(h.detail)}</span>
+            ${h.action ? `<span class="f-act"><b>What to do:</b> ${esc(h.action)}</span>` : ""}
+            <span class="f-extra">${esc(scopeLabel(h.scope_key))} · ${esc(val)}</span>
+          </span>
+          <span class="f-scope">${esc(scopeLabel(h.scope_key))}</span>
+          <span class="f-val num">${esc(val)}</span>
+          <span class="f-chev">›</span>
+        </a>`;
+      }).join("")}
+    </div>
+  </section>`));
+
+  /* ---------- key signals (the nine tracked series, org scope) ---------- */
+  const tiles = (org.series || []).map((s, i) => {
+    const m = metricAt(C.root_scope, s.metric_id);
+    if (!m) return "";
+    const d = splitDisplay(m.display);
+    const prefix = isFloor(m) ? "≥ " : "";
+    const value = m.value == null
+      ? `<span class="t-value" style="font-size:14px;font-weight:500;color:var(--ink-3)">Not available</span>`
+      : `<div class="t-value"><span data-countup="${esc(prefix + (d.num || m.display))}">${esc(prefix + (d.num || m.display))}</span><span class="unit">${esc(d.suffix.trim())}</span></div>`;
+    return `<a class="tile rv d${(i % 3) + 1}" href="${metricHref(m.id, C.root_scope)}">
+      <div class="t-label"><span>${esc(m.label)}</span><span class="chip" style="flex:none">${esc(m.confidence)}</span></div>
+      ${value}
+      <div class="t-sub">${esc(s.note || s.label)}</div>
+      ${sparkSVG(s.points, { w: 260, h: 34 })}
+    </a>`;
+  }).join("");
+  main.appendChild(el(`<section class="section">
+    <div class="section-head rv">
+      <h2>Key signals</h2>
+      <span class="note">Twelve months, month by month. A break in a line is missing data, never bridged.</span>
+      <span class="spacer"></span>
+      <a class="small" href="${scopeHref(C.root_scope)}">Open the full ledger — all 57 metrics →</a>
+    </div>
+    <div class="tiles">${tiles}</div>
+  </section>`));
+
+  /* ---------- repositories at a glance ---------- */
+  const cols = [
+    ["process.review_coverage", "Reviewed before merge"],
+    ["delivery.lead_time_p50", "Median lead time"],
+    ["quality.rework_rate", "Rework within 21 d"],
+    ["ai.detected_commit_share", "AI-traced commits"],
+    ["people.active_contributors", "Active contributors"],
+  ];
+  const repoRows = (C.navigation.projects || []).flatMap((p) =>
+    p.repos.map((r) => {
+      const cells = cols.map(([id]) => {
+        const m = metricAt(r.key, id);
+        if (!m) return `<td class="r dim">—</td>`;
+        const txt = m.value == null ? `<span class="dim small">n/a</span>` : `<span class="num">${esc(displayOf(m))}</span>`;
+        return `<td class="r"><a class="cellink" href="${metricHref(id, r.key)}" title="Open the evidence">${txt}</a></td>`;
+      }).join("");
+      return `<tr>
+        <td><a class="cellink" href="${scopeHref(r.key)}"><b>${esc(r.label)}</b></a><div class="src-detail">${esc(p.label)}</div></td>
+        ${cells}</tr>`;
+    })
+  ).join("");
+  main.appendChild(el(`<section class="section">
+    <div class="section-head rv">
+      <h2>Repositories at a glance</h2>
+      <span class="note">Every cell opens to its own evidence. AI figures are floors — they count only tools that left a trace, so they print with ≥.</span>
+    </div>
+    <div class="table-scroll rv d1"><table class="data striped" style="min-width:640px">
+      <thead><tr><th>Repository</th>${cols.map(([, l]) => `<th class="r">${esc(l)}</th>`).join("")}</tr></thead>
+      <tbody>${repoRows}</tbody>
+    </table></div>
+  </section>`));
+
+  /* ---------- before / after ---------- */
+  const cmp = org.comparison;
+  if (cmp) {
+    const rows = cmp.rows.map((r) => {
+      const change = r.change_pct != null
+        ? (r.change_pct > 0 ? "+" : "") + fmtVal(r.change_pct) + "%"
+        : r.change_points != null
+          ? (r.change_points > 0 ? "+" : "") + fmtVal(r.change_points) + " pts"
+          : "—";
+      return `<tr>
+        <td><a class="cellink" href="${metricHref(r.metric_id, C.root_scope)}">${esc(r.label)}</a>
+            <div class="src-detail">${esc(r.confidence)} confidence</div></td>
+        <td class="r num">${esc(r.before_display)}</td>
+        <td class="r num">${esc(r.after_display)}</td>
+        <td class="r num">${esc(change)}</td>
+      </tr>`;
+    }).join("");
+    main.appendChild(el(`<section class="section">
+      <div class="section-head rv">
+        <h2>Two halves of the year</h2>
+        <span class="note">${esc(cmp.split_reason)} Two things moving together are reported as two things moving together — nothing here claims one caused the other.</span>
+      </div>
+      <div class="table-scroll rv d1"><table class="data striped" style="min-width:560px">
+        <thead><tr><th>Metric</th><th class="r">${esc(cmp.before_label)}<div class="delta">${esc(fmtVal(cmp.before_commits))} commits</div></th>
+        <th class="r">${esc(cmp.after_label)}<div class="delta">${esc(fmtVal(cmp.after_commits))} commits</div></th><th class="r">Change</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </section>`));
+  }
+
+  /* ---------- heatmap ---------- */
+  const hm = org.heatmap;
+  if (hm && hm.grid) {
+    const max = Math.max(...hm.grid.flat(), 1);
+    let cells = `<div class="hlab"></div>`;
+    for (let h = 0; h < 24; h++) cells += `<div class="hcol">${h % 3 === 0 ? String(h).padStart(2, "0") : ""}</div>`;
+    hm.grid.forEach((row, d) => {
+      cells += `<div class="hlab">${esc(hm.weekdays[d])}</div>`;
+      row.forEach((v, h) => {
+        const pct = Math.round((v / max) * 88);
+        cells += `<div class="hcell" style="background:color-mix(in srgb, var(--accent) ${pct}%, var(--bg-sunken))" title="${esc(hm.weekdays[d])} ${String(h).padStart(2, "0")}:00 — ${esc(fmtVal(v))} commits" role="img" aria-label="${esc(hm.weekdays[d])} ${String(h).padStart(2, "0")}:00, ${esc(fmtVal(v))} commits"></div>`;
+      });
+    });
+    main.appendChild(el(`<section class="section">
+      <div class="section-head rv">
+        <h2>When the work happens</h2>
+        <span class="note">${esc(fmtVal(hm.total))} commits by weekday and hour.</span>
+      </div>
+      <div class="heatwrap rv d1">
+        <div class="heatgrid">${cells}</div>
+        <p class="heatnote">${esc(hm.note)}</p>
+      </div>
+    </section>`));
+  }
+
+  /* ---------- provenance ---------- */
+  const dq = C.data_quality, col = C.collection, idr = col.identity_resolution || {};
+  const exclTop = Object.entries(C.exclusions?.by_reason || {})
+    .sort((a, b) => b[1] - a[1]).slice(0, 7);
+  const limits = (dq.structural_limits || []).map((l, i) =>
+    `<div class="prov-card rv d${(i % 4) + 1}"><h4>${esc(l.title)}</h4><p>${esc(l.detail)}</p></div>`).join("");
+  main.appendChild(el(`<section class="section" id="method" style="padding-bottom:28px">
+    <div class="section-head rv">
+      <h2>How this report was made</h2>
+      <span class="note">The limits of the evidence, stated before you read anything into it.</span>
+    </div>
+    <div class="prov-grid">${limits}</div>
+    <div class="prov-grid mt16">
+      <div class="prov-card rv d1"><h4>Collection</h4>
+        <p>Six repositories collected in ${esc(fmtVal(col.duration_seconds))} seconds — ${esc(fmtVal(col.graphql_calls))} GraphQL and ${esc(fmtVal(col.rest_calls))} REST calls, ${esc(fmtVal(col.llm_calls))} LLM calls. Pull requests are fetched newest-first, so the oldest can fall outside the window; each metric's sample states exactly what was read.</p>
+        <ul>
+          <li><span>People identified</span><span class="num">${esc(fmtVal(idr.people))}</span></li>
+          <li><span>Bot accounts excluded</span><span class="num">${esc(fmtVal(idr.bots_excluded))}</span></li>
+          <li><span>Duplicate identities merged</span><span class="num">${esc(fmtVal(idr.identities_merged))}</span></li>
+          <li><span>Lines excluded as generated</span><span class="num">${esc(fmtVal(dq.coverage?.total_lines_excluded_as_generated))}</span></li>
+        </ul>
+      </div>
+      <div class="prov-card rv d2"><h4>What never counts as authored code</h4>
+        <p>The largest exclusion classes, applied before any line is counted.</p>
+        <ul>${exclTop.map(([k, v]) => `<li><span>${esc(k)}</span><span class="num">${esc(fmtVal(v))}</span></li>`).join("")}</ul>
+      </div>
+    </div>
+  </section>`));
+
+  colophon();
+  revealInit();
+})();
+</script>
+</body>
+</html>

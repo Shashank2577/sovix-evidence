@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sovix — The ledger</title>
+<script>(function(){try{var t=localStorage.getItem("sovix-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230071e3'/%3E%3Ctext x='16' y='22' font-family='-apple-system,Helvetica,Arial,sans-serif' font-weight='600' font-size='17' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  .scope-facts { display: flex; flex-wrap: wrap; gap: 0 26px; row-gap: 8px; margin: 12px 0 4px; padding-top: 10px; border-top: 1px solid var(--hairline); }
+  tr.mtr { cursor: default; }
+  td.c-sample .covbar { width: 64px; }
+</style>
+</head>
+<body>
+<main id="main" class="container"></main>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const { C, esc, el, qs, header, colophon, revealInit, sparkSVG, fmtVal, scopeOrder,
+          metricHref, displayOf, isNA, isFloor, toolbarTitle, toolbarSearch, statusSlot } = window.SVX;
+  header("ledger");
+  const main = document.getElementById("main");
+
+  const key = qs("scope") && C.scopes[qs("scope")] ? qs("scope") : C.root_scope;
+  const sc = C.scopes[key];
+  const meta = scopeOrder().find((s) => s.key === key);
+  const F = sc.facts;
+  document.title = "Sovix — The ledger — " + meta.label;
+  /* The scope name lives once, as the page h1; the toolbar carries the role. */
+  toolbarTitle("The ledger", "");
+
+  /* ---------- head ---------- */
+  main.appendChild(el(`<nav class="crumbs rv" aria-label="Breadcrumb">
+    <a href="index.html">Report</a><span class="sep">/</span>
+    <span>The ledger</span><span class="sep">/</span>
+    <span aria-current="page">${esc(meta.label)}</span>
+  </nav>`));
+
+  const range = F.first_commit && F.last_commit ? esc(F.first_commit.slice(0,10)) + " → " + esc(F.last_commit.slice(0,10)) : "";
+  main.appendChild(el(`<section class="evi-head">
+    <div class="overline accent rv">${esc(meta.level)} scope · ${esc(fmtVal((F.repos||[]).length))} repositor${(F.repos||[]).length===1?"y":"ies"}</div>
+    <h1 class="rv d1" style="max-width:none">${esc(meta.label)}</h1>
+    <p class="section-sub rv d2" style="margin:0">All 57 metrics at this scope. Every row opens to its formula, its sample, its exclusions, and the records behind it. Metrics with no eligible records read “Not available”, never zero.</p>
+    <div class="scope-facts rv d3">
+      ${[["commits", F.commits], ["pull requests", F.pull_requests], ["reviews", F.reviews],
+         ["contributors", F.contributors], ["span", range]]
+        .map(([k, v]) => `<div class="fact"><div class="v num" ${typeof v === "number" ? `data-countup="${esc(fmtVal(v))}"` : ""}>${esc(typeof v === "number" ? fmtVal(v) : v)}</div><div class="k">${esc(k)}</div></div>`).join("")}
+    </div>
+  </section>`));
+
+  /* ---------- the ledger table ---------- */
+  const seriesById = new Map((sc.series || []).map((s) => [s.metric_id, s]));
+  const fams = C.glossary.families;
+  const tierLegend = C.data_quality.tier_legend || {};
+  const confLegend = C.data_quality.confidence_legend || {};
+  const confGlyph = (c) => c === "high" ? "●●●" : c === "medium" ? "●●○" : "●○○";
+
+  const bodies = Object.keys(fams).map((famKey) => {
+    const fam = fams[famKey];
+    const metrics = fam.metric_ids.map((id) => sc.metrics.find((m) => m.id === id)).filter(Boolean);
+    const rows = metrics.map((m) => {
+      const s = m.sample || {};
+      const cov = s.coverage_pct;
+      const val = isNA(m)
+        ? `<span class="na">Not available</span>`
+        : esc(displayOf(m));
+      const sample = isNA(m) || cov == null
+        ? `<span class="dim">—</span>`
+        : `n=${esc(fmtVal(s.n))} · ${esc(fmtVal(cov))}%<span class="covbar" style="--cov:${Math.max(Math.min(cov,100),0)/100}"><i></i></span>`;
+      const sSeries = seriesById.get(m.id);
+      const spark = sSeries ? sparkSVG(sSeries.points, { w: 120, h: 22, area: false }) : "";
+      const floorTag = isFloor(m) ? `<span class="tag-floor" title="Counts only tools that left a trace. The true figure is higher by an unknown margin — read ≥ as “at least”, never “this much”.">floor</span>` : "";
+      return `<tr class="mtr" data-search="${esc((m.label + " " + m.id + " " + fam.label).toLowerCase())}" data-href="${metricHref(m.id, key)}">
+        <td class="c-metric"><a class="cellink m-name" href="${metricHref(m.id, key)}">${esc(m.label)}</a>${floorTag}<div class="m-id">${esc(m.id)}</div></td>
+        <td class="c-val">${val}</td>
+        <td class="c-sample">${sample}</td>
+        <td class="c-tier" title="${esc(tierLegend[m.tier] || "")}">◆ ${esc(m.tier)}</td>
+        <td class="c-conf" title="${esc(confLegend[m.confidence] || "")}"><span class="glyph">${confGlyph(m.confidence)}</span>${esc(m.confidence)}</td>
+        <td class="c-trend">${spark}</td>
+        <td class="c-chev">›</td>
+      </tr>`;
+    }).join("");
+    return `<tbody class="fam" data-fam="${esc(famKey)}">
+      <tr class="grp-h"><th colspan="7">${esc(fam.label)}<span class="grp-count">${metrics.length} metrics</span><span class="grp-blurb">${esc(fam.blurb)}</span></th></tr>
+      ${rows}
+    </tbody>`;
+  }).join("");
+
+  const tableWrap = el(`<div class="section" style="padding-top:14px;padding-bottom:28px">
+    <div class="table-scroll rv d1"><table class="data" aria-label="All 57 metrics at ${esc(meta.label)}">
+      <thead><tr>
+        <th>Metric</th><th class="r">Value</th><th class="h-sample">Sample</th>
+        <th class="h-tier">Tier</th><th class="h-conf">Confidence</th>
+        <th class="h-trend">Trend · 12 mo</th><th></th>
+      </tr></thead>
+      ${bodies}
+    </table></div>
+  </div>`);
+  main.appendChild(tableWrap);
+
+  /* rows navigate like a table view; the metric name stays a real link for the keyboard */
+  const allRows = [...tableWrap.querySelectorAll("tr.mtr")];
+  allRows.forEach((tr) => {
+    tr.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      if (getSelection().toString()) return;
+      location.href = tr.dataset.href;
+    });
+    tr.style.cursor = "pointer";
+  });
+
+  /* ---------- filter (toolbar search) + stripes + status count ---------- */
+  const fams2 = [...tableWrap.querySelectorAll("tbody.fam")];
+  function restripe() {
+    let i = 0;
+    allRows.forEach((r) => {
+      if (r.classList.contains("hide")) { r.classList.remove("alt"); return; }
+      r.classList.toggle("alt", i % 2 === 1);
+      i++;
+    });
+    return i;
+  }
+  const q = toolbarSearch("Filter the 57 metrics…", "Filter metrics");
+  function applyFilter() {
+    const t = q.value.trim().toLowerCase();
+    allRows.forEach((r) => r.classList.toggle("hide", !!t && !r.dataset.search.includes(t)));
+    fams2.forEach((b) => {
+      b.classList.toggle("hide", ![...b.querySelectorAll("tr.mtr")].some((r) => !r.classList.contains("hide")));
+    });
+    const n = restripe();
+    statusSlot(t ? n + " of 57 metrics · " + meta.label : "57 metrics · " + meta.label);
+  }
+  q.addEventListener("input", applyFilter);
+  applyFilter();
+
+  colophon();
+  revealInit();
+})();
+</script>
+</body>
+</html>

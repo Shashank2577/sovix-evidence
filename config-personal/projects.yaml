@@ -1,0 +1,99 @@
+# Shashank2577's portfolio, grouped by product family.
+#
+# Grouping matters more than it looks: a project metric is recomputed from the
+# union of its repositories' raw records, never averaged from the per-repository
+# results. So "review coverage for Sovix" is a real figure over real pull
+# requests. Without this file every repository becomes its own single-repository
+# project and the project tier just repeats the repository tier.
+#
+# Anything not named below is still collected and still appears at organisation
+# and repository level; it simply has no project of its own.
+
+projects:
+  Sovix:
+    description: >
+      Engineering-evidence product line: the analytics core, the publishing
+      pipeline, the interface and the CLI.
+    repos:
+      - Shashank2577/sovix-evidence
+      - Shashank2577/sovix-evidence-ui
+      - Shashank2577/sovix-ai-brain
+      - Shashank2577/sovix-cli
+      - Shashank2577/receipts
+
+  Prompture:
+    description: Prompt tooling, library and CLI.
+    repos:
+      - Shashank2577/prompture
+      - Shashank2577/prompture-cli
+
+  Spreix:
+    description: >
+      The Spreix platform and its satellites: the web platform, the brain
+      service, the note-taker and the boat.
+    repos:
+      - Shashank2577/spreix-platform
+      - Shashank2577/spreix-brain
+      - Shashank2577/spreix-notetaker
+      - Shashank2577/spreix-boat
+
+  AI SDLC:
+    description: >
+      Agent-assisted software delivery: the method, the pilot, and the
+      chief-of-staff agent.
+    repos:
+      - Shashank2577/ai-sdlc
+      - Shashank2577/ai-sdlc-pilot
+      - Shashank2577/ai-cos
+      - Shashank2577/backlot
+
+  OpenCover:
+    description: Coverage tooling across its several attempts.
+    repos:
+      - Shashank2577/Opencover
+      - Shashank2577/opencover-complete
+      - Shashank2577/openCover-codex
+
+  Axon:
+    description: Axon and its sandbox.
+    repos:
+      - Shashank2577/axon
+      - Shashank2577/axon-sandbox
+
+  Agent walkthroughs:
+    description: >
+      The awesome-* walkthrough series for Claude Code, Copilot, Cursor and
+      Codex, plus the adjacent agent lists.
+    repos:
+      - Shashank2577/awesome-claude-code-walkthrough
+      - Shashank2577/awesome-copilot-walkthrough
+      - Shashank2577/awesome-cursor-walkthrough
+      - Shashank2577/awesome-codex-walkthrough
+      - Shashank2577/awesome-claude-jules
+      - Shashank2577/Awesome-managed-agent
+
+  Java platform:
+    description: >
+      The Java-side work: microservice frameworks, the micro-SaaS pair, RAG and
+      the shared utilities.
+    repos:
+      - Shashank2577/java-microservices-framework
+      - Shashank2577/micro-saas
+      - Shashank2577/micro-saas-java
+      - Shashank2577/JavaRAG
+      - Shashank2577/payload-utility
+      - Shashank2577/cross-cutting
+
+  Observability:
+    description: Tracing and observability experiments.
+    repos:
+      - Shashank2577/observability
+      - Shashank2577/Observability-Jager-GroundCover
+
+  Growth and marketing:
+    description: The growth dashboard, marketing site and outbound material.
+    repos:
+      - Shashank2577/growth-dashboard
+      - Shashank2577/GrowthOS
+      - Shashank2577/Marketing
+      - Shashank2577/shashanksaxena.info

@@ -3,9 +3,10 @@
 **Feature Branch**: `005-session-replay`  
 **Created**: 2026-09-12  
 **Status**: Draft  
-**Input**: Specify the OTLP ingestion boundary, session reconstruction, tiered replay surface,
-coverage honesty rules, per-tool-call detail, usage-to-owner association and the multi-runtime
-capability matrix required to make an agent session inspectable under ADR-015.
+**Input**: Specify the OTLP ingestion boundary, session reconstruction, the replay surface for
+metadata and session content, coverage honesty rules, per-tool-call detail, usage-to-owner
+association and the multi-runtime capability matrix required to make an agent session inspectable
+under ADR-016.
 
 ## Product Definition
 
@@ -14,10 +15,15 @@ Spec 001 accepts redacted OTLP traces (FR-019 through FR-024) and stores `Sessio
 specification defines that surface, the ingestion contract that feeds it, and the honesty rules
 that keep it from overstating what was observed.
 
-ADR-015 governs. Content capture has three tiers; tier 0 is the default and is sufficient for
-every deterministic metric (ADR-015 rule 1). Replay at tier 0 is a metadata surface: the span
-tree, timings, tool names, error classes and token counts, with an explicit statement that
-payloads were not captured. This specification adds no metric and changes no metric definition.
+ADR-016 governs. Session content (prompts, system instructions, responses, tool arguments and
+results including any file paths inside them, session title and raw error text) is captured by
+default, with no capture tiers and no per-developer opt-out, and is hard-deleted no later than 30
+days after the session ends (ADR-016 rules 1 and 2). Metadata is kept for `spans_days` (default
+60), strictly longer than content retention, and is sufficient for every deterministic metric; no
+metric reads content. Replay shows the full conversation while content is retained. Where content
+is missing or has expired, for the whole session or for some of its spans, replay falls back to a
+metadata surface (the span tree, timings, tool names, error classes and token counts) and states
+which case applies. This specification adds no metric and changes no metric definition.
 
 This specification extends the existing entities. `Session`, `Span` and `UsageUnit`
 (data-model.md:34-36) are extended, never duplicated. Requirements already covered by spec 001
@@ -25,7 +31,7 @@ are referenced by ID and not restated.
 
 The upstream sender is the Dash0 agent plugin. Its behaviour is a verified external contract, not
 an assumption: it filters attributes with a deny list, so every new upstream field is exported by
-default (ADR-015 rule 5), and its OTLP JSON attribute value carries only `stringValue` or
+default (ADR-016 rule 7), and its OTLP JSON attribute value carries only `stringValue` or
 `intValue`, so booleans and floats arrive as strings. Both facts are load-bearing below.
 
 ### Delivery scope
@@ -35,9 +41,9 @@ default (ADR-015 rule 5), and its OTLP JSON attribute value carries only `string
 | R0 | Receiver accepts and sanitizes real traffic | Shared foundation | Independent allowlist, unknown keys discarded, string-typed value coercion, idempotent replay |
 | R1 | A single-turn session is navigable | US30, US31 | Turn tree rebuilt from fixtures for all four runtimes, coverage banner before any value |
 | R2 | Token and cost totals are honest | US32 | Canonical-owner accounting, no double count, `known_incomplete` stated where true |
-| R3 | Sub-agent work is navigable | US33 | Sibling-shape and nested-shape trees both reconstructed by agent ID |
-| R4 | Degraded and interrupted sessions are legible | US34 | Dangling, orphan, interrupted and unreconstructable states rendered distinctly |
-| R5 | Local replay shows payloads | US35 | Tier 1 store has no transmission path; secret scan at every tier |
+| R3 | Replay shows the session's conversation | US35 | Content readers and fail-closed admin-only read audit per FR-340; hard deletion within 30 days or the shorter workspace period; secret scan before storage; present, partial, missing and expired states rendered per FR-334, never as an empty conversation |
+| R4 | Sub-agent work is navigable | US33 | Sibling-shape and nested-shape trees both reconstructed by agent ID |
+| R5 | Degraded and interrupted sessions are legible | US34 | Dangling, orphan, interrupted and unreconstructable states rendered distinctly |
 | R6 | Capability matrix is a product artifact | US36 | Versioned matrix shipped with the adapter and rendered in product |
 
 ## User Scenarios & Testing *(mandatory)*
@@ -53,18 +59,21 @@ this one from lying.
 
 **Independent Test**: A Claude Code fixture of one session with 3 turns and 14 tool calls, two of
 them failures, renders a timeline whose tool order, durations and error classes match the fixture
-exactly, states the capture tier, and shows no payload pane.
+exactly, and states the session's content state before any value.
 
 **Acceptance Scenarios**:
 
-1. **Given** a tier 0 session, **when** the developer opens replay, **then** the tool calls appear
-   in start-time order with name, duration and status, and the payload region states that
-   arguments and results were not captured at this workspace's tier rather than rendering empty.
+1. **Given** a session, **when** the developer opens replay, **then** the tool calls appear in
+   start-time order with name, duration and status; with content present each call shows its
+   secret-redacted arguments and result, and every payload region without content, whether the
+   session's content is partial, missing or expired, states which, with the reason or the expiry
+   date, rather than rendering empty.
 2. **Given** a turn whose chat span has not yet arrived, **when** replay is opened, **then** the
    turn is shown as in progress with its observed tool calls and a stated incomplete usage total,
    and no cost figure is presented as final.
 3. **Given** a tool call with error status, **when** the developer opens it, **then** an error
-   class is shown, and at tier 0 no raw exception text is shown because none was retained.
+   class is shown, and raw error text is shown beside it only while the session's content is
+   present; the class is identical whether the content is present, partial, missing or expired.
 4. **Given** a session whose spans arrived out of order across three deliveries, **when** replay
    is opened, **then** display order is derived from parent relationships and span start time, not
    from receipt order, and the rendering is identical to a single-delivery fixture.
@@ -74,8 +83,8 @@ exactly, states the capture tier, and shows no payload pane.
 ### User Story 31 - Ingest telemetry without trusting the sender (Priority: P1)
 
 An admin registers a collector and the platform accepts its traces, keeping only attributes it
-recognizes, discarding everything else, and never storing a payload the workspace's tier forbids
-— even when the sender transmits one.
+recognizes, discarding everything else, and storing recognized content only as secret-redacted
+session content — whatever the sender transmits.
 
 **Why this priority**: The upstream sender filters with a deny list. A field added upstream
 arrives by default. Trusting it is the one mistake this product cannot survive.
@@ -90,9 +99,10 @@ logs and quarantine records finds zero occurrences of the twelve.
 1. **Given** a span carrying an attribute key absent from the allowlist, **when** it is ingested,
    **then** the attribute is discarded before persistence, quarantine and logs, the span is still
    accepted, and a redaction counter records the category and count without the key's value.
-2. **Given** a workspace at tier 0 and a sender configured with `omit_io=false`, **when** spans
-   carrying `gen_ai.tool.call.arguments` arrive with real content, **then** the content is
-   discarded at the receiver and no tier 0 record contains it.
+2. **Given** a sender configured with `omit_io=false`, **when** spans carrying
+   `gen_ai.tool.call.arguments` arrive with real content, **then** the content is secret-scanned
+   and stored only in the session content entity of FR-337, and no metadata record, quarantine
+   record or log contains it.
 3. **Given** a token count arriving as `stringValue` `"12345"` and another as `intValue`
    `"12345"`, **when** both are ingested, **then** both normalize to the integer 12345.
 4. **Given** a token count arriving as `"-1"`, `"1.5"` or `"abc"`, **when** it is ingested,
@@ -101,6 +111,9 @@ logs and quarantine records finds zero occurrences of the twelve.
 5. **Given** the identical sanitized batch delivered twice, **when** both are processed, **then**
    the second is a no-op with no new accounting effect and is not reported as a partial rejection
    per FR-023 and integrations.md:176-178.
+6. **Given** an admin installing a collector, **when** installation completes, **then** its
+   output states once that prompts, system instructions, responses and tool output are captured
+   and kept for up to 30 days, and asks for no consent, opt-in or opt-out, per FR-339.
 
 ---
 
@@ -177,8 +190,9 @@ than believing they are seeing everything.
 Rendering a degraded session as a complete one converts a known limitation into a false claim.
 
 **Independent Test**: A Cursor fixture with a dangling sub-agent span, a fixture whose session
-identifier was absent and substituted, and a fixture ending in the interrupted-session error chat
-span each render a distinct, named state with a user-visible explanation.
+identifier was absent and substituted, a fixture ending in the interrupted-session error chat
+span, and a fixture whose sender sent no content each render a distinct, named state with a
+user-visible explanation.
 
 **Acceptance Scenarios**:
 
@@ -198,37 +212,59 @@ span each render a distinct, named state with a user-visible explanation.
 5. **Given** a sub-agent tool call the sender dropped because its trace context was already
    consumed, **when** replay is opened, **then** the absence is not presented as the agent doing
    nothing, because instrumentation coverage for that branch is `partial`.
+6. **Given** a session whose collector sent no content, or sent a sender placeholder such as
+   `<REDACTED>` in its place, **when** replay is opened, **then** the session is
+   `content_state=missing` with its reason, it is counted in collection coverage, and its payload
+   regions state that content was not received rather than rendering an empty conversation.
+7. **Given** a session in which only some spans carry content, **when** replay is opened, **then**
+   the session is `content_state=partial`, spans with content show it, and every span without
+   content states that its content was not received.
 
 ---
 
-### User Story 35 - Turn on local replay and see payloads (Priority: P3)
+### User Story 35 - Read a session's full conversation (Priority: P1)
 
-A developer enables local replay on their own machine with one command and can then see the
-arguments a tool received and the result it returned, for their own sessions, with credentials
-redacted and with no path by which that content reaches the hosted service.
+A developer, or a lead permitted to read the session, opens it and reads the prompts, the system
+instructions, the agent's responses, the arguments each tool received and the result it
+returned, with credentials redacted, for up to 30 days after the session ended. After that,
+replay shows the metadata and says when the content expired.
 
-**Why this priority**: It is the capability that makes replay answer "what happened" instead of
-only "what ran", and ADR-015 permits it only on the machine that produced it.
+**Why this priority**: Content replay is the core surface. It makes replay answer "what happened"
+instead of only "what ran", and coaching (spec 006) reads the same content under the same access
+rules. ADR-016 captures content by default and bounds it to 30 days, so the story is as much about
+content leaving on time as about it arriving.
 
-**Independent Test**: With tier 1 enabled, a session's tool arguments and results are visible
-locally; a credential-shaped string in a tool result is stored redacted; and every sync, export
-and published-artifact path produces output containing none of the content.
+**Independent Test**: A session with content present shows its prompts, system instructions,
+responses, tool arguments and results to its developer, to owner and admin, and to an analyst
+whose grant covers its project, and to no other internal viewer or external principal; a
+credential-shaped string in a tool result is stored redacted; every read request writes one audit
+event only owner and admin can read; and 30 days after the session ends the content is gone from
+storage and replay states the expiry date, while every metric is unchanged.
 
 **Acceptance Scenarios**:
 
-1. **Given** tier 1 enabled on a local workspace, **when** a session is replayed, **then** tool
-   arguments, tool results, prompts and responses are shown, each labelled with the capture tier
-   that produced them.
-2. **Given** tier 1 content on disk, **when** any sync, export, snapshot or published artifact is
-   produced, **then** the content is absent because no code path reads the tier 1 store, not
-   because a filter excluded it.
-3. **Given** a tool result containing a credential-shaped string, **when** it is stored at tier 1,
-   **then** the credential is replaced before storage and the redaction is recorded.
-4. **Given** a workspace enabling tier 2, **when** capture begins, **then** an admin action, a
-   retention bound of at most 30 days, an audit record and prior notification of every affected
-   contributor all exist, and an opted-out contributor's sessions remain at tier 0.
-5. **Given** a mixed workspace where some sessions are tier 0 and some tier 2, **when** any metric
-   is computed, **then** the values are identical to those computed with every session at tier 0.
+1. **Given** a session with content present, **when** a permitted reader replays it, **then**
+   prompts, system instructions, responses, tool arguments, tool results, session title and raw
+   error text are shown, each labelled as content and distinguished from metadata per FR-335.
+2. **Given** session content in storage, **when** any export, snapshot, published artifact, event
+   payload or operational log is produced, **then** the content is absent because no code path in
+   those paths reads the content entity, not because a filter excluded it.
+3. **Given** a tool result containing a credential-shaped string, **when** it is stored, **then**
+   the credential is replaced before storage and the redaction is recorded.
+4. **Given** an analyst whose grant covers a session's project, **when** they open its content,
+   **then** it is shown whatever `individual_attribution_enabled` is set to, one `AuditEvent`
+   recording actor, time, and the session ID returned with its subject handle is written with no
+   content, and the subject is not notified and cannot list the read; an internal viewer or an
+   `is_external` principal making the same request reaches no content.
+5. **Given** a session that ended more than 30 days ago, or longer ago than a workspace's shorter
+   period, **when** replay is opened, **then** its content has been hard-deleted, any backup copy
+   is unreadable because its content key was destroyed, a restore has re-applied the deletion
+   before serving, the payload regions state the date the content expired, and the turn list,
+   timings, tool names and token counts remain readable, because metadata retention is strictly
+   longer than content retention per FR-339.
+6. **Given** a corpus in which some sessions have content present, some partial, some missing and
+   some expired, **when** any metric is computed, **then** the values are identical to those
+   computed with every session's content removed.
 
 ---
 
@@ -281,8 +317,12 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   with a built-in tool name.
 - A `Skill` tool call with no skill name, and a skill loaded by context injection so it lands on
   the chat span with no tool call at all.
-- A workspace downgrading from tier 2 to tier 0 with content still inside the retention bound.
-- A contributor opting out of tier 2 while one of their sessions is mid-capture.
+- A workspace shortening its content retention period while sessions inside the old period still
+  hold content; the shorter period applies to them per FR-339.
+- A developer disabling content in their own collector mid-session, so some spans of one session
+  carry content and others do not; the session is `content_state=partial` per FR-341.
+- A session that never records an end; its content and metadata retention clocks both run from
+  its last received span per FR-339.
 - A session deleted by project deletion while a replay view is open.
 
 ## Requirements *(mandatory)*
@@ -301,12 +341,13 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   `execute_tool`. A span with any other kind or operation name MUST be rejected with a safe
   content-free diagnostic and counted, not stored as an unclassified span.
 - **FR-302**: The receiver MUST NOT accept the span's `name` field as data. Display names MUST be
-  reconstructed from the validated operation name, model and tool name per integrations.md:135-136,
+  reconstructed from the validated operation name, model and tool name per integrations.md:136-137,
   because the wire name embeds the model and tool name a second time and is the sender's string.
-- **FR-303**: `traceState`, `flags`, `status.message`, span `events` and span `links` MUST be
-  discarded. Decision: `status.message` is discarded even though it is the only field carrying the
-  sender's error text, because retaining arbitrary exception content at tier 0 contradicts
-  integrations.md:136-137. Error classification is specified in FR-351.
+- **FR-303**: `traceState`, `flags`, span `events` and span `links` MUST be discarded. Decision:
+  `status.message` is the only field carrying the sender's error text, which ADR-016 rule 1 makes
+  session content, so it MUST be admitted only as a content key per FR-307 and never retained as
+  metadata. This is aligned with integrations.md:109 and :133-134. Error classification is
+  specified in FR-351 and MUST NOT read it.
 - **FR-304**: Batch limits, attribute count and depth limits, quota checks and partial-success
   semantics MUST follow integrations.md:167-179 unchanged. A span rejected for an allowlist reason
   MUST NOT be reported as a partial rejection when the span itself was accepted with attributes
@@ -315,12 +356,12 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 #### B. Ingestion: the independent attribute allowlist
 
 - **FR-305**: The receiver MUST apply its own allowlist and MUST discard every key not named in it,
-  at every capture tier, per ADR-015 rule 5. The allowlist MUST be a closed enumeration in the
-  adapter contract, versioned per NFR-011. An attribute key absent from the enumeration MUST NOT
-  reach persistence, quarantine, operational logs, job payloads, caches, search indexes or
-  exports. Adding a key MUST require a contract version change and a fixture, never a
-  configuration setting.
-- **FR-306**: The tier 0 allowlist is exactly the following, and this set MUST be sufficient for
+  for metadata and content keys alike, per ADR-016 rule 7. The allowlist MUST be a closed
+  enumeration in the adapter contract, versioned per NFR-011. An attribute key absent from the
+  enumeration MUST NOT reach persistence, quarantine, operational logs, job payloads, caches,
+  search indexes or exports. Adding a key MUST require a contract version change and a fixture,
+  never a configuration setting.
+- **FR-306**: The metadata allowlist is exactly the following, and this set MUST be sufficient for
   every replay behaviour in section C and every metric in metrics.md. It supersedes and extends
   integrations.md:99-131; rows marked new were absent there.
 
@@ -328,7 +369,7 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   |---|---|---|
   | `traceId`, `spanId`, `parentSpanId` | | Lowercase hex 32/16/16; nonzero; absent parent permitted only on a `chat` span |
   | `startTimeUnixNano`, `endTimeUnixNano` | | Integer nanosecond strings; negative duration rejected per FR-321 |
-  | `status.code` | | Unset/OK/Error only; message discarded per FR-303 |
+  | `status.code` | | Unset/OK/Error only; message is content per FR-303 |
   | `kind` | | Must equal Internal; otherwise the span is rejected per FR-301 |
   | resource `service.name`, `service.version`; scope `name`, `version` | | Registered runtime/plugin identifiers, max 128 chars; never authority |
   | `gen_ai.conversation.id` | | Opaque external session ID, max 256 chars; scoped by collector |
@@ -363,12 +404,15 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   | `dash0.warning` | Yes | Matched against a registry of known sender warnings to produce a coverage reason code; the raw string is discarded per FR-310 |
   | `user.email` | | Transient only per FR-309; consumed to compute a contributor digest and then discarded |
 
-- **FR-307**: The tier 1 and tier 2 content extension is exactly the following keys, and they MUST
-  be discarded outright at tier 0: `gen_ai.input.messages`, `gen_ai.output.messages`,
-  `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`, `gen_ai.conversation.name`,
-  `exception.message`. `gen_ai.conversation.name` is in this set because the sender derives the
-  session title from the user's first prompt, making it user content rather than a label.
-- **FR-308**: The following keys MUST be denied at every tier, and the denial MUST be enumerated
+- **FR-307**: The content allowlist is exactly the following keys. They are on the allowlist per
+  ADR-016 rule 7, and each MUST be persisted only as session content under FR-337 through FR-340,
+  never as metadata: `gen_ai.input.messages`, `gen_ai.output.messages`,
+  `gen_ai.system_instructions`, `gen_ai.tool.call.arguments`, `gen_ai.tool.call.result`,
+  `gen_ai.conversation.name`, `exception.message`, and `status.message` per FR-303.
+  `gen_ai.conversation.name` is in this set because the sender derives the session title from the
+  user's first prompt, making it user content rather than a label. File paths are captured only
+  inside tool arguments and results; no separate attribute carries them.
+- **FR-308**: The following keys MUST be denied unconditionally, and the denial MUST be enumerated
   rather than left to the absence of an allowlist entry, so that a fixture can assert it:
   span `name`, `user.name`, `process.working_directory`, `dash0.team.name`, `traceparent`,
   `dash0.gen_ai.rate_limit.*` in every form, `dash0.gen_ai.credits.*` in every form, and every key
@@ -378,20 +422,23 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   |---|---|
   | span `name` | Sender-authored string; reconstructed per FR-302 |
   | `user.name` | Plaintext contributor identity; forbidden by data-model.md:13 and ADR-011 |
-  | `process.working_directory` | Local filesystem path; forbidden by data-model.md:13 |
+  | `process.working_directory` | Local filesystem path of the process; dropped by integrations.md:136 and security.md:53. File paths are content only inside tool arguments and results, per FR-307 |
   | `dash0.team.name` | Sender-asserted team label; team scope comes from ADR-011 entities, and a sender-supplied label is not authorization |
   | `traceparent` | Propagation header naming a trace that exists only on the developer's machine; correlation is deliberately not attempted per FR-323 |
   | `dash0.gen_ai.rate_limit.*`, `dash0.gen_ai.credits.*` | Allowance and credit snapshots, dropped by integrations.md:133-138. Consequence accepted and disclosed: rate-limit exhaustion is not an observable cause of a stalled session. Revisiting requires an ADR |
-  | any unrecognized key | ADR-015 rule 5; the sender exports new fields by default |
+  | any unrecognized key | ADR-016 rule 7; the sender exports new fields by default |
 
 - **FR-309**: `user.email` MUST be consumed only inside the trusted ingestion process to compute
   the `Contributor` `identity_digest` per FR-069, and MUST then be discarded. It MUST NOT be
   written to any column, index, log, quarantine record, job payload, cache, backup or export, and
   MUST NOT cross a process or queue boundary, per NFR-021.
-- **FR-310**: `dash0.warning` and, where admitted, `exception.message` MUST be matched against a
-  versioned registry of known sender-emitted sentinel strings to derive a bounded reason code. An
-  unmatched value MUST produce `unknown_warning` or `unknown_error` respectively, and the raw
-  string MUST be discarded at tier 0 and MUST NOT be echoed in any diagnostic.
+- **FR-310**: `dash0.warning` MUST be matched against a versioned registry of known sender-emitted
+  sentinel strings to derive a bounded reason code. An unmatched value MUST produce
+  `unknown_warning`, and the raw string MUST be discarded and MUST NOT be echoed in any
+  diagnostic. Raw error text (`exception.message`, `status.message`) is session content under
+  FR-307: it MUST NOT be matched to derive a reason code or error class and MUST NOT be echoed in
+  any diagnostic, so that classification is identical whether content is present, partial,
+  missing or expired.
 
 #### C. Ingestion: normalization, typing and idempotency
 
@@ -499,10 +546,10 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 
 #### E. Replay surface
 
-- **FR-330**: Replay MUST present, for a selected session: a coverage and tier statement, the list
-  of turns, and for a selected turn a chronological timeline, a tool-call list, a sub-agent tree, a
-  usage and cost panel, and an error list. The coverage and tier statement MUST appear before any
-  numeric value, mirroring FR-079.
+- **FR-330**: Replay MUST present, for a selected session: a coverage and content-state statement,
+  the list of turns, and for a selected turn a chronological timeline, a tool-call list, a
+  sub-agent tree, a usage and cost panel, and an error list. The coverage and content-state
+  statement MUST appear before any numeric value, mirroring FR-079.
 - **FR-331**: The tool-call list MUST show, per call, the tool name, start time, duration, status
   and error class, in start-time order per FR-321. Duration MUST be labelled reconstructed rather
   than measured on runtimes where the sender derives it from a reported elapsed time instead of
@@ -514,42 +561,86 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 - **FR-333**: The usage panel MUST show accumulation across the turn: input, output, cache read,
   cache creation and reasoning tokens as separate quantities, each either a count or an explicit
   unavailable state. An unavailable category MUST NOT render as 0, per Constitution I.
-- **FR-334**: Tier-dependent rendering MUST be exactly as follows, per ADR-015 rule 6. A tier 0
-  session MUST state that payloads were not captured. An empty payload pane MUST NOT be rendered at
-  any tier.
+- **FR-334**: Content-dependent rendering MUST be exactly as follows, per ADR-016 rules 1 and 2. A
+  session whose content is missing MUST state that content was not received and why; a session
+  whose content is partial MUST state, on each span without content, that it was not received; a
+  session whose content has expired MUST state when it expired. An empty payload pane MUST NOT be
+  rendered in any state, and a session without content MUST NOT be rendered as an empty
+  conversation.
 
-  | Element | Tier 0 | Tier 1 | Tier 2 |
-  |---|---|---|---|
-  | Turn list, timings, status | Shown | Shown | Shown |
-  | Tool name, call ID, duration, status, error class | Shown | Shown | Shown |
-  | Token counts and cost estimate | Shown | Shown, identical to tier 0 | Shown, identical to tier 0 |
-  | Sub-agent tree and linkage state | Shown | Shown | Shown |
-  | Tool arguments and results | Stated not captured, with the tier named | Shown, secret-redacted | Shown, secret-redacted, retention-bounded |
-  | Prompt and response content | Stated not captured | Shown, secret-redacted | Shown, secret-redacted, retention-bounded |
-  | Session title | Stated not captured | Shown where the runtime provides one | Shown where the runtime provides one |
-  | Raw error text | Never shown; class only | Shown | Shown |
-  | Any metric value | Unchanged by tier | Unchanged by tier | Unchanged by tier |
+  | Element | Content present | Content partial | Content missing | Content expired |
+  |---|---|---|---|---|
+  | Turn list, timings, status | Shown | Shown | Shown | Shown |
+  | Tool name, call ID, duration, status, error class | Shown | Shown | Shown | Shown |
+  | Token counts and cost estimate | Shown | Shown, identical to content present | Shown, identical to content present | Shown, identical to content present |
+  | Sub-agent tree and linkage state | Shown | Shown | Shown | Shown |
+  | Tool arguments and results | Shown, secret-redacted | Shown where the span carries it; otherwise stated not received | Stated not received, with the reason | Stated expired, with the date |
+  | Prompt, system instruction and response content | Shown, secret-redacted | Shown where the span carries it; otherwise stated not received | Stated not received, with the reason | Stated expired, with the date |
+  | Session title | Shown where the runtime provides one | Shown where received; otherwise stated not received | Stated not received | Stated expired |
+  | Raw error text | Shown, secret-redacted | Shown where the span carries it; otherwise class only | Never shown; class only | Never shown; class only |
+  | Any metric value | Unchanged by content state | Unchanged by content state | Unchanged by content state | Unchanged by content state |
 
-- **FR-335**: Every value shown in replay MUST carry a tier provenance label, so a reader can tell
-  metadata from content. A tier 1 or tier 2 value MUST be visually distinguished from a tier 0 value
-  and MUST NOT be presented as though it were universally available.
-- **FR-336**: Replay MUST NOT be a publication surface. No tier 1 or tier 2 content may enter a
-  `PublishedArtifact`, `Snapshot`, `Export` or machine-readable manifest, at any role, profile or
-  redaction setting, per ADR-015 rule 4. A replay view MUST offer no content export.
-- **FR-337**: Tier 1 content MUST reside in a store that no sync, export, snapshot or publication
-  code path reads. This MUST be achieved by a separate entity with no reader in those paths, not by
-  a flag checked at read time, per ADR-015 rule 2.
-- **FR-338**: Tool arguments, tool results, prompts and responses MUST be scanned for
-  credential-shaped strings and redacted before storage at every tier, including tier 1, per
-  ADR-015 rule 7. A redaction MUST record the category and count, never the matched value.
-- **FR-339**: Tier 2 capture MUST require an admin action, a retention bound of at most 30 days, an
-  audit record, and notification of every affected contributor before capture begins. An opted-out
-  contributor's sessions MUST remain at tier 0, per ADR-015 rule 3. A tier downgrade MUST stop
-  capture immediately and MUST delete retained content within the retention bound.
+- **FR-335**: Every value shown in replay MUST carry a provenance label, so a reader can tell
+  metadata from content. A content value MUST be visually distinguished from a metadata value and
+  MUST NOT be presented as though it were permanent or available for every session.
+- **FR-336**: Replay MUST NOT be a publication surface. No session content may enter a
+  `PublishedArtifact`, `Snapshot`, `Export`, machine-readable manifest, event payload, operational
+  log, audit payload or search index readable by another principal, at any role, profile or
+  redaction setting, per ADR-016 rule 7. A replay view MUST offer no content export.
+- **FR-337**: Session content MUST reside in a content entity separate from the metadata entities.
+  A collector registered to a hosted workspace sends content to that workspace; a local workspace
+  with no hosted account keeps its content on the machine, under the same deletion bound, per
+  ADR-016. No metric calculation, export, snapshot, publication, event or
+  cross-principal search-indexing code path may read it; its only readers are replay under FR-340
+  and coaching under ADR-016 rule 6. This MUST be achieved by the absence of a reader in those
+  paths, not by a flag checked at read time. Content MUST exist only on an ingested session's
+  spans; prompt fragments inside imported reports (Receipts, AIBOM) have no session and no expiry
+  anchor, and MUST stay discarded, per ADR-016.
+- **FR-338**: Tool arguments, tool results, prompts, system instructions, responses and every
+  other content key of FR-307 MUST be scanned for credential-shaped strings and redacted before
+  storage, hosted and local alike, per ADR-016 rule 7. A redaction MUST record the category and
+  count, never the matched value.
+- **FR-339**: Session content MUST be captured by default, with no capture tier, no admin
+  enablement, no per-contributor opt-out and no notification to contributors, per ADR-016 rules 1
+  and 4. Content MUST be hard-deleted no later than 30 days after the session ends. The content and
+  metadata retention clocks both start at the session's end, which for a session that never
+  finalizes is its last received span. A workspace MAY set a shorter content period of at least 1
+  day, held as `RetentionPolicy.session_content_days` (spec 001 data-model.md:51, default 30), and
+  MUST NOT set a longer one; no role, hold, export or configuration may extend it. A shorter
+  period MUST apply to content already stored. Metadata MUST be kept for
+  `RetentionPolicy.spans_days` (7 to 90, default 60) and MUST strictly outlive content:
+  `spans_days` MUST be greater than `session_content_days`, validated when the policy is written,
+  and a span purge MUST NOT be relied on to delete content. A restore from backup MUST re-apply
+  deletion before serving, and backup copies of expired content MUST be unreadable per NFR-077,
+  so a restore
+  cannot resurrect expired content. The collector's install output and the workspace settings
+  page MUST state once that prompts, system instructions, responses and tool output are captured
+  and kept for up to 30 days; this is a statement of fact, not an opt-in, an opt-out or a
+  notification, per ADR-016 rule 8.
 - **FR-340**: Replay MUST be reachable at every scope level a principal is authorized for, and MUST
-  apply FR-087, FR-091 and FR-092 unchanged. An external principal (`is_external`) MUST NOT reach
-  replay at all, because a session is a per-person record and FR-085 denies the contributor
-  dimension absolutely.
+  apply FR-087, FR-091 and FR-092 unchanged except as this requirement states. Session content
+  MUST be readable only by the developer whose linked contributor identity produced the session,
+  per FR-091; by owner and admin across the workspace; and by an analyst for a session in a
+  project inside their grant, per ADR-016 rule 3. A session with no project is outside every
+  analyst grant. Content access MUST NOT depend on `individual_attribution_enabled`, which
+  continues to gate named-person metric views under FR-092. A principal permitted by this rule
+  MAY list one developer's sessions per request, within the projects they can read, and see that
+  developer's pseudonymous handle; a reader other than the developer MUST name exactly one
+  developer, or the explicit `unattributed` filter, in every session listing request, and an
+  unfiltered listing is permitted only for the developer's own sessions. The `unattributed` filter
+  lists sessions with no linked developer to the same readers; those sessions carry no handle, so
+  the listing is not a view of a person and writes no `AuditEvent`, while a content read on such
+  a session is audited as any other. Such a principal MAY keep reading a session's metadata after
+  its content expires. Sessions and developers MUST NOT be ordered by a metric, per FR-090. An
+  internal viewer MUST NOT reach another person's session content. An external principal
+  (`is_external`) MUST NOT reach replay at all, because a session is a
+  per-person record and FR-085 denies the contributor dimension absolutely. Every read request
+  for session content MUST write exactly one `AuditEvent` recording actor, time, and the session
+  IDs whose content it returned, possibly none, each with its subject contributor handle, per
+  ADR-016 rule 5. The audit write MUST succeed before content is returned; a failed audit write
+  MUST fail the read. That event MUST carry no content, MUST be readable by owner and
+  admin only, and MUST NOT be shown, listed or sent to the subject; FR-093's notification and
+  FR-094's subject listing MUST NOT apply to it, per ADR-016 rule 4 and ADR-013 rule 4 as amended.
 
 #### F. Coverage and honesty
 
@@ -564,7 +655,7 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   | `usage_completeness` | `complete`, `known_incomplete`, `unknown` | Whether observed token totals are believed to be the session's full consumption |
   | `subagent_linkage` | `anchored`, `dangling`, `ambiguous`, `unavailable` | Whether sub-agent spans are correctly parented |
   | `tool_duration_source` | `measured`, `reconstructed`, `unavailable` | How tool durations were obtained |
-  | `content_tier` | `0`, `1`, `2` | The tier that produced the record, per ADR-015 |
+  | `content_state` | `present`, `partial`, `missing`, `expired` | Whether session content is available, per ADR-016 rules 1 and 2; `partial` means only some spans carry content; `missing` and `partial` carry why content was not received, `expired` when it was deleted |
   | `identity_confidence` | `git`, `os`, `absent` | Provenance of the attribution, from the sender's identity source |
   | `placeholder_fields` | List of field names | Fields whose value was a runtime placeholder and is stored unknown |
 
@@ -597,6 +688,7 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   | MCP server is a fixed placeholder | Cursor | `placeholder_fields` includes the MCP server field | The runtime reports a placeholder, so the real server is unknown |
   | Model reported as a router placeholder | Cursor | Model `unknown` for pricing, `placeholder_fields` includes the model | The router did not disclose which model ran, so usage is unpriced |
   | Session identifier absent and randomly substituted | All | `reconstruction_state=unreconstructable` per FR-318 | This record could not be attached to a session |
+  | Content not sent by the collector, or replaced by a sender placeholder such as `<REDACTED>` under `omit_io=true` | All | `content_state=missing`, or `partial` when only some spans lack content, reason `content_not_sent` or `sender_placeholder`; counted in collection coverage per ADR-016 rule 1 | This session's prompts, system instructions, responses and tool output were not received; its metadata and metrics are unaffected |
   | Propagation header deliberately not correlated | Copilot CLI | No effect; documented | The runtime's own trace is not correlated with this one |
 
 - **FR-345**: A capability the matrix declares unavailable MUST render as unavailable with the
@@ -614,32 +706,34 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 
 #### G. Tool-call detail
 
-- **FR-349**: Per tool call, the following MUST be recorded and rendered at the stated tier. A field
+- **FR-349**: Per tool call, the following MUST be recorded and rendered according to whether the
+  call's span carries content; in a `partial` session each span follows its own column. A field
   unavailable for the runtime MUST follow FR-345.
 
-  | Field | Tier 0 | Tier 1 and 2 | Notes |
+  | Field | Span content missing or expired | Span content present | Notes |
   |---|---|---|---|
   | Tool name | Yes | Yes | Normalized; MCP tool names normalized to a canonical form |
   | Tool call ID | Yes | Yes | Opaque; used to join, never to authorize |
   | Tool type | Yes | Yes | Only `function` recognized in v1 |
   | Start time, end time, duration | Yes | Yes | Duration source labelled per FR-331 |
   | Status | Yes | Yes | From `status.code` only |
-  | Error class | Yes | Yes | Derived per FR-351; raw text tier 1 and 2 only |
+  | Error class | Yes | Yes | Derived per FR-351 from metadata only; raw text is content |
   | Bash command family | Yes | Yes | Bounded family, not the command line |
   | Skill name and skill source | Yes | Yes | Source distinguishes model-chosen from person-invoked |
   | MCP server | Yes | Yes | Placeholder handled per FR-353 |
   | Lines added, lines removed | Yes | Yes | Proxy per Constitution II; unavailable on one runtime |
   | Model | Yes | Yes | May be absent on a sub-agent's tool call; unavailable, not the parent's model |
-  | Arguments, result | Not captured, stated | Shown, secret-redacted | Truncation marker preserved per FR-352 |
+  | Arguments, result | Stated not received or expired, per FR-334 | Shown, secret-redacted | Truncation marker preserved per FR-352 |
 
 - **FR-350**: A skill loaded by context injection rather than by a tool call MUST be recorded on the
   turn's chat span and MUST NOT be rendered as a tool call. Its absence from the tool-call list MUST
   NOT be read as the skill not being used. One runtime loads skills exclusively this way.
 - **FR-351**: Error class MUST be derived from `status.code` plus the sentinel registry of FR-310,
   producing one of a bounded set including at least `tool_error`, `interrupted_session` and
-  `unknown_error`. Classification MUST NOT be performed by retaining or pattern-matching arbitrary
-  exception content at tier 0.
-- **FR-352**: Content admitted at tier 1 or 2 MUST preserve the sender's truncation marker as a
+  `unknown_error`. Classification MUST NOT read session content, including raw error text, so a
+  tool call's error class is identical whether its session's content is present, partial, missing
+  or expired.
+- **FR-352**: Session content MUST preserve the sender's truncation marker as a
   distinct state. A truncated value MUST be rendered as truncated with the sender's reported total
   size, and MUST NOT be presented as the complete argument or result. The receiver MUST apply its
   own size bound independently and MUST NOT assume the sender truncated.
@@ -714,7 +808,7 @@ a coverage state that matches the matrix row without a separate hand-maintained 
   | Externally metered billing provider | Yes | No | No | No |
   | Rate-limit and credit snapshots | No | No | Emitted upstream, denied at ingest per FR-308 | No |
   | Harness-internal calls observable | No | Unknown | Unknown | Unknown |
-  | Prompt and response content available at tier 1 and 2 | Yes | Yes | Yes | Yes, native source |
+  | Prompt and response content available | Yes | Yes | Yes | Yes, native source |
 
 - **FR-363**: A runtime not present in the matrix MUST be ingested as `unverified`: its spans are
   accepted and stored, every capability-dependent field is `unknown`, and its sessions are excluded
@@ -744,13 +838,26 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 - **NFR-075**: Discarding an attribute MUST be constant-cost and MUST NOT allocate or log the
   value. A batch consisting entirely of unrecognized attributes MUST NOT degrade throughput by more
   than 10% relative to a batch of entirely allowlisted attributes.
-- **NFR-076**: No content or identity excluded by tier or allowlist may appear in any accepted
+- **NFR-076**: No identity or attribute excluded by the allowlist may appear in any accepted
   record, quarantine record, operational log, trace, metric, cache, search index, backup, crash dump
-  or export, per NFR-010. A tier 1 store MUST have no reader in any sync, export or publication code
-  path, verified by dependency inspection rather than by runtime assertion.
-- **NFR-077**: Tier 2 content MUST be deleted within its retention bound of at most 30 days, and a
-  tier downgrade MUST stop capture within one session boundary. Deletion MUST leave a content-free
-  tombstone, per data-model.md:107-113.
+  or export, per NFR-010. Session content MUST NOT appear in any metadata record, quarantine record,
+  operational log, trace, metric, cache, crash dump or export, or in a search index readable by
+  another principal. The content entity of FR-337 MUST have no reader in any metric calculation,
+  export, snapshot or publication code path, verified by dependency inspection rather than by
+  runtime assertion.
+- **NFR-077**: Session content MUST be hard-deleted, hosted and local, no later than 30 days after
+  the session ends, or within the workspace's `session_content_days`, per FR-339. Deletion MUST
+  leave a content-free tombstone recording when the content expired, per data-model.md:107-112.
+  Content MUST be encrypted under content keys scoped to one workspace and one session-end day. A
+  still-open session's content MUST be written under a provisional key and re-wrapped to its
+  end-day key when the session ends, or at its last received span when it never finalizes. In
+  hosted mode keys MUST be held in the secret manager or KMS, outside every database backup; in
+  local mode they MUST be held in the OS keychain or an equivalent local key store, outside the
+  local database and any local backup, with the same per-day destruction. A key MUST be
+  destroyed when the content it protects expires, and shortening `session_content_days` MUST
+  destroy the affected keys early, so every backup copy of expired content becomes unreadable. A
+  restore from backup MUST still complete deletion of expired content before any content is
+  served.
 - **NFR-078**: Replay MUST be isolation-preserving under NFR-007. A conversation ID, trace ID, span
   ID, agent ID or tool-call ID supplied by a client MUST NOT widen the visible population, and a
   guessed identifier MUST NOT produce a response distinguishable from that of a nonexistent one.
@@ -771,17 +878,15 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 
 | Entity | Required fields beyond scope/ID | Relationships and constraints |
 |---|---|---|
-| Session (changed) | content_tier, reconstruction_state, reconstruction_algorithm_version, capability_matrix_version, runtime_version, plugin_version, adapter_version, usage_completeness, span_completeness, subagent_linkage, tool_duration_source, identity_confidence, placeholder_fields, watermark_at | Extends data-model.md:34; `coverage` becomes the structured record of FR-341; unreconstructable sessions excluded from every per-session metric |
+| Session (changed) | content_state, content_missing_reason nullable, content_expired_at nullable, reconstruction_state, reconstruction_algorithm_version, capability_matrix_version, runtime_version, plugin_version, adapter_version, usage_completeness, span_completeness, subagent_linkage, tool_duration_source, identity_confidence, placeholder_fields, watermark_at | Extends data-model.md:34; `coverage` becomes the structured record of FR-341; content_state is `present`, `partial`, `missing` or `expired` per FR-341, content_missing_reason is set when missing or partial, content_expired_at when expired; unreconstructable sessions excluded from every per-session metric |
 | Span (changed) | span_type, internal_span_key, wire_span_id, logical_parent_span_id nullable, parent_resolution_method, clock_anomaly, error_class, tool_detail, agent_id nullable | Extends data-model.md:35; span_type chat/invoke_agent/execute_tool; unique collector+trace+internal_span_key; wire_span_id may repeat within a trace per FR-317; logical parent is reconstructed, wire parent is retained unchanged |
 | UsageUnit (changed) | reasoning_output_tokens nullable, cache_creation_ephemeral_5m_tokens nullable, cache_creation_ephemeral_1h_tokens nullable, completeness | Extends data-model.md:36; unique owner span unchanged; ephemeral fields are components of cache_creation and never additive; completeness carries the FR-342 state |
-| SessionCoverage | session_id, field, state, reason_code, explanation_key, matrix_version, recorded_at, schema_version, digest | One row per FR-341 field per session; immutable; a missing row MUST NOT be read as healthy |
+| SessionCoverage | session_id, field, state, reason_code, explanation_key, matrix_version, recorded_at, schema_version, digest | One row per FR-341 field per session; immutable; a missing row MUST NOT be read as healthy; content deletion appends a `content_state=expired` row rather than editing the earlier one |
 | RuntimeCapability | harness_name, adapter_version, capability_key, availability, reason_code, placeholder_value_class nullable, matrix_version, digest | Availability available/unavailable/placeholder/unverified; the single artifact consumed by ingestion and rendered in product per FR-361; immutable per matrix version |
-| AttributeAllowlistVersion | version, tier, accepted_keys, denied_keys, coercion_rules, digest | Closed enumeration per FR-305 through FR-308; adding a key requires a new version and a fixture; never a runtime setting |
+| AttributeAllowlistVersion | version, accepted_keys, content_keys, denied_keys, coercion_rules, digest | Closed enumeration per FR-305 through FR-308; content_keys is the FR-307 set, persisted only as session content; adding a key requires a new version and a fixture; never a runtime setting |
 | SentinelRegistry | version, kind, pattern_class, reason_code, digest | kind warning/error; maps a known sender string to a bounded reason code per FR-310; unmatched yields unknown_warning or unknown_error |
-| LocalSpanContent | span_id, session_id, field, value_redacted, truncated, truncated_total_bytes, redaction_counts, recorded_at | Tier 1 only; local store with no reader in any sync, export or publication path per FR-337; no transmission path exists by construction |
-| SharedSpanContent | span_id, session_id, field, value_redacted, truncated, truncated_total_bytes, redaction_counts, retention_expires_at, capture_authorization_id, recorded_at | Tier 2 only; retention bound at most 30 days; never enters a Snapshot, Export or PublishedArtifact per FR-336 |
-| ContentCaptureAuthorization | workspace_id, tier, enabled_by, enabled_at, retention_days, audit_event_id, notified_contributor_count, notified_at | Required before tier 2 capture begins per FR-339; retention_days at most 30; a downgrade appends a new record rather than editing this one |
-| ContributorCaptureOptOut | contributor_id, opted_out_at, actor_id | An opted-out contributor's sessions remain at tier 0 regardless of the workspace tier |
+| SpanContent | span_id, session_id, field, value_redacted, truncated, truncated_total_bytes, redaction_counts, retention_expires_at, recorded_at | The content entity of FR-337; field is one of the FR-307 content keys (prompts, system instructions, responses, tool arguments and results, session title, raw error text); span_id is required and is `Span.id`, the platform UUID, not the 16-hex OTLP wire span ID (`wire_span_id`); the session title is stored on the root `chat` span's SpanContent; hosted, or on the machine for a local workspace with no hosted account; retention_expires_at at most 30 days after the session ends, or `RetentionPolicy.session_content_days` when shorter, recomputed when that period is shortened, per FR-339; no reader in any metric, export, snapshot or publication path; never enters a Snapshot, Export or PublishedArtifact per FR-336 |
+| RetentionPolicy (changed) | session_content_days; spans_days default | Extends spec 001 data-model.md:51; session_content_days is an integer from 1 to 30, default 30, per FR-339; spans_days stays 7 to 90 with default 60; both clocks start at session end, or at the last received span when the session never finalizes; a write where spans_days is not greater than session_content_days is rejected; no other retention field, hold or role extends content |
 | RedactionCounter | session_id, category, count, recorded_at | Categories and counts only; never a key name that was denied for content reasons and never a value, per integrations.md:138 |
 
 ## Success Criteria *(mandatory)*
@@ -818,39 +923,69 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 - **SC-049**: A placeholder-emitting runtime's MCP server field and router model identifier are
   stored unknown with reason `placeholder_value`, appear in `placeholder_fields`, produce no priced
   cost, and are never rendered as a real server or model.
-- **SC-050**: Every metric value computed over a corpus of sessions at tiers 0, 1 and 2 is identical
-  to the value computed with the same corpus forced to tier 0, to the last decimal place of its
-  canonical representation.
-- **SC-051**: A dependency inspection of the sync, export, snapshot and publication code paths finds
-  zero references to the tier 1 content store, and a fixture run at tier 1 produces sync payloads,
-  exports, snapshots and published artifacts containing none of the captured content.
+- **SC-050**: Every metric value computed over a corpus of sessions with content present, partial,
+  missing and expired is identical to the value computed with every session's content removed, to
+  the last decimal place of its canonical representation.
+- **SC-051**: A dependency inspection of the metric calculation, export, snapshot and publication
+  code paths finds zero references to the session content entity, and a fixture run with content
+  present produces exports, snapshots, published artifacts, event payloads, audit payloads and
+  operational logs containing none of the captured content.
 - **SC-052**: Seeded credential-shaped strings in tool arguments and results are redacted before
-  storage in 100% of cases at tier 1 and tier 2, with the redaction counted and the matched value
+  storage in 100% of cases, hosted and local, with the redaction counted and the matched value
   absent from storage and logs.
-- **SC-053**: A tier 0 session's replay view states that payloads were not captured on 100% of
-  payload regions, and an automated check finds zero rendered payload panes that are empty without
-  such a statement.
+- **SC-053**: A session whose content is missing, partial or expired states, on 100% of payload
+  regions without content, that content was not received with the reason, or that it expired with
+  the date, and an automated check finds zero rendered payload panes that are empty without such a
+  statement.
 - **SC-054**: Summing a session's token totals from its reconstructed tree equals the sum of its
   canonical usage units exactly, with sub-agent units marked `included_in_parent` contributing zero
   and the ephemeral cache-creation breakdown contributing zero, across all four runtime fixtures.
 - **SC-055**: Reconstruction of a 2,000-span session with depth 8 completes within 250 milliseconds
   at the 95th percentile while issuing a bounded query count independent of span count, verified by
   query count rather than wall clock alone.
+- **SC-056**: A fixture session's content is absent or unreadable in every store, hosted and
+  local, including backups, no later than 30 days after the session ends, or after its last
+  received span when it never finalizes, and within a workspace's `session_content_days` when
+  shorter, including content stored before the period was shortened; a backup copy of that
+  content is unreadable once its key is destroyed, and no database backup contains a content key;
+  a restore from a backup taken before deletion serves none of it; and at the default retention
+  (content 30 days, spans 60 days) the session's replay states the expiry date while its metadata
+  stays readable and every metric derived from it is unchanged.
+- **SC-057**: Across every role and principal type of FR-087, a request for a session's content
+  succeeds exactly for the session's own developer, owner, admin and an analyst whose grant covers
+  the session's project, with the same outcome whether `individual_attribution_enabled` is true or
+  false, and is refused for every other internal viewer and every `is_external` principal with a
+  response indistinguishable from that for a nonexistent session; a session listing request from
+  a reader other than the developer is refused unless it names exactly one developer or the
+  `unattributed` filter; and an `unattributed` listing returns only sessions with no linked
+  developer, carries no handle and writes no `AuditEvent`, while a content read on one of those
+  sessions writes one as usual.
+- **SC-058**: Every content read request writes exactly one `AuditEvent` carrying actor, time and
+  the session IDs returned with their subject handles, including a request that returns none, and
+  no content; the event is readable by owner and admin and is absent from every view, list, inbox
+  and notification available to the subject; and a fixture whose audit write fails returns no
+  content.
 
 ## Supersessions
 
 | Existing text | Effect of this specification |
 |---|---|
-| Constitution III "Raw-content capture is excluded from initial delivery; a future change requires a separately versioned policy" | Satisfied rather than contradicted. ADR-015 is that separately versioned policy; tier 0 remains the default and no metric depends on a higher tier |
-| ADR-006 metadata-only telemetry | Qualified by ADR-015. Metadata-only remains the default posture and the only posture for hosted metrics |
-| plan.md:33 metadata-only telemetry commitment | Qualified for replay only. No calculation path gains access to content |
-| integrations.md:99-131 metadata allowlist | Extended by FR-306. Fourteen keys are added, all of them metadata; the content keys remain excluded at tier 0 by FR-307 |
-| integrations.md:133-138 "drop … rate-limit and credit snapshots" | Retained. FR-308 keeps them denied and discloses the observability cost |
-| integrations.md:109 "discard status message" | Retained and made explicit by FR-303; error classification moves to the sentinel registry of FR-310 |
+| Constitution III (2.0.0) "Session content … MAY be stored in the platform database for session replay and coaching only" | Implemented. FR-307 and FR-336 through FR-340 apply its secret redaction, 30-day hard deletion, reader set and exclusion from metrics, exports, snapshots, events, logs and published artifacts |
+| ADR-006 metadata-only telemetry | Superseded for session telemetry by ADR-016. Content is captured by default; metadata remains the only input to hosted metrics |
+| plan.md:33 telemetry commitment | Aligned with ADR-016 in spec 001 for replay and coaching. No calculation path gains access to content |
+| integrations.md:99-131 metadata allowlist | Extended by FR-306 and FR-307. Fourteen metadata keys are added by FR-306; the content keys of FR-307 are admitted as session content per ADR-016 rule 7 |
+| integrations.md:133-138 dropping of rate-limit and credit snapshots | Retained. FR-308 keeps them denied and discloses the observability cost |
+| integrations.md:109 and :133-134 status message as session content | Aligned with FR-303. The status message is raw error text, admitted only as session content per ADR-016 rule 1; error classification reads metadata only, via the sentinel registry of FR-310 |
+| ADR-015 capture tiers 0, 1 and 2 | Superseded by ADR-016 rule 1. FR-334 and FR-341 model content state (`present`, `partial`, `missing`, `expired`) instead of a tier; `content_tier` becomes `content_state` |
+| ADR-015 rule 2, tier 1 local-only store with no transmission path | Superseded. FR-337 keeps one content entity, hosted and local, with no reader in any metric, export, snapshot or publication path; `LocalSpanContent` and `SharedSpanContent` become `SpanContent` |
+| ADR-015 rule 3, admin enablement, contributor notice and per-contributor opt-out | Superseded by ADR-016 rules 1, 4 and 8. FR-339 captures by default with a one-time disclosure and a 30-day hard-deletion limit; `ContentCaptureAuthorization` and `ContributorCaptureOptOut` are removed, and a workspace's shorter period is `RetentionPolicy.session_content_days` |
+| spec 001 data-model.md:51 RetentionPolicy | Extended with `session_content_days`, 1 to 30 days, default 30, per FR-339 and ADR-016's clarifications; shortening applies to content already stored; `spans_days` default raised to 60 and MUST exceed `session_content_days` |
+| FR-087 and FR-092 gating of another person's data by `individual_attribution_enabled` | Not applied to session content or to browsing sessions by developer, per ADR-016 rule 3 and its clarifications. FR-340 grants content, session listing filtered to one developer and post-expiry metadata to owner, admin and analysts within their grant; FR-092 continues to gate named-person metric views |
+| FR-093 notification and FR-094 subject listing of named-person queries | Not applied to session-content reads, per ADR-016 rules 4 and 5 and ADR-013 rule 4 as amended. FR-340 writes an audit event readable by owner and admin only |
 | FR-022 "Sessions MUST expose elapsed duration, supported token categories, tool/error counts and instrumentation coverage" | Extended by FR-330 through FR-334 into a defined surface, and by FR-341 into a structured coverage record |
 | FR-024 unsupported fields have explicit availability states | Extended by FR-344 and FR-345 into a per-runtime mapping with user-visible text |
 | data-model.md:34-36 Session, Span, UsageUnit | Extended by the Key Entities table above; no new span or usage table is introduced |
-| data-model.md:13 tool arguments and output excluded from the platform database | Retained for the platform database. Tier 1 content lives only in the local store; tier 2 content lives in a separate hosted store that no export or publication path reads |
+| data-model.md:13-15 placement of prompts, responses, tool input and output and file paths | Aligned with ADR-016 and Constitution III 2.0.0 in spec 001. They live only in the expiring session-content store, which this specification defines as the `SpanContent` entity of FR-337, secret-redacted and hard-deleted within 30 days |
 
 ## Assumptions
 
@@ -860,20 +995,27 @@ a coverage state that matches the matrix row without a separate hand-maintained 
 - Four runtimes are in scope: Claude Code, Cursor, Codex CLI and GitHub Copilot CLI. Codex CLI on
   the platforms named in integrations.md:77-79 is the certified target; any other runtime or
   platform is `unverified` per FR-363 and research R4.
-- The sender's `omit_io` default is not relied upon. The receiver's own allowlist is the only
-  control that matters, and a workspace at tier 0 receiving content from a misconfigured sender
-  discards it (FR-306, FR-307).
+- The sender's `omit_io` setting is not relied upon for privacy; the receiver's own allowlist
+  decides which keys are accepted (FR-305 through FR-308). Sovix's recommended collector
+  configuration sets `omit_io` to false (ADR-016 rule 1). A sender left at its default sends a
+  placeholder in place of content, which produces `content_state=missing` per FR-344 and is never
+  stored as content.
 - Rate-limit and credit telemetry remains out of scope. A customer requirement to explain a stalled
   session by allowance exhaustion is the revisit trigger and requires an ADR amending
   integrations.md:133-138.
-- Cross-machine replay of a contributor's own sessions is out of scope and is ADR-015's revisit
-  trigger, because it requires tier 1 data to sync end-to-end encrypted under a key the platform
-  cannot read.
+- Cross-machine replay of a developer's own sessions needs no separate mechanism: hosted content
+  is readable from any machine by the principals of FR-340, per ADR-016. Content of a local
+  workspace with no hosted account stays on its machine per FR-337.
 - Correlating a runtime's own native trace with ours is out of scope. When it is undertaken it MUST
   be a span link applied to every span of a turn, not the retention of a propagation header.
 - The secret-detection rule set for FR-338 is the same versioned rule set used elsewhere in the
-  product. Its recall is not assumed to be complete, which is a further reason tier 1 has no
-  transmission path.
+  product. Its recall is not assumed to be complete, which is a further reason content is bounded
+  to 30 days and kept out of every export and publication path.
+- Meeting local employment law for content capture, such as a transparency duty or a prior
+  employee-representative agreement, is the deploying organization's responsibility. The
+  disclosure of FR-339 is the product's minimum, per ADR-016.
+- How coaching reads session content is specified in spec 006. FR-337 names coaching as the only
+  reader of the content entity besides replay.
 - Replay presents no new attribution. Associating a session with a change, PR or repository remains
   candidate linkage under FR-025 and research R6.
 - The in-product explanation strings referenced by `explanation_key` are localizable content, not

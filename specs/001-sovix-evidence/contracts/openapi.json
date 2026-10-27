@@ -4956,7 +4956,7 @@
     "/v1/workspaces/{workspace_id}/sessions": {
       "get": {
         "operationId": "listSessions",
-        "summary": "List metadata-only observed sessions",
+        "summary": "List observed session metadata and content state",
         "tags": [
           "US4"
         ],
@@ -4964,7 +4964,8 @@
         "x-roles": [
           "owner",
           "admin",
-          "analyst"
+          "analyst",
+          "viewer"
         ],
         "parameters": [
           {
@@ -5026,6 +5027,23 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "contributor_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Required to list another developer's sessions; exactly one developer per request. Omitted: only the caller's own sessions."
+          },
+          {
+            "name": "unattributed",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "true lists sessions with no linked developer (contributor_id null, no handle): metadata only, not a person view, not audited. Same readers; cannot be combined with contributor_id (400)."
           }
         ],
         "responses": {
@@ -5157,7 +5175,10 @@
               }
             }
           }
-        }
+        },
+        "x-self-access": true,
+        "description": "Without contributor_id the list holds only the caller's own sessions (x-self-access: viewer is self-only). Owner, admin and analysts within their grant list another developer's sessions only by naming that one developer in contributor_id, one developer per request, and see contributor_handle (ADR-016 Clarifications); unattributed=true instead lists sessions with no linked developer, unaudited because it is metadata only. Session metadata stays readable after content expires. Results are never ordered by a metric (FR-090).",
+        "x-one-developer-per-request": true
       }
     },
     "/v1/workspaces/{workspace_id}/sessions/{session_id}": {
@@ -5171,7 +5192,8 @@
         "x-roles": [
           "owner",
           "admin",
-          "analyst"
+          "analyst",
+          "viewer"
         ],
         "parameters": [
           {
@@ -5332,13 +5354,15 @@
               }
             }
           }
-        }
+        },
+        "x-self-access": true,
+        "description": "x-self-access: a viewer reads only sessions their linked contributor identity produced (ADR-016 rule 3)."
       }
     },
     "/v1/workspaces/{workspace_id}/sessions/{session_id}/spans": {
       "get": {
         "operationId": "listSessionSpans",
-        "summary": "Read metadata-only spans",
+        "summary": "Read span metadata without content",
         "tags": [
           "US4"
         ],
@@ -5346,7 +5370,8 @@
         "x-roles": [
           "owner",
           "admin",
-          "analyst"
+          "analyst",
+          "viewer"
         ],
         "parameters": [
           {
@@ -5548,7 +5573,228 @@
               }
             }
           }
-        }
+        },
+        "x-self-access": true,
+        "description": "x-self-access: a viewer reads only sessions their linked contributor identity produced (ADR-016 rule 3)."
+      }
+    },
+    "/v1/workspaces/{workspace_id}/sessions/{session_id}/content": {
+      "get": {
+        "operationId": "listSessionContent",
+        "summary": "Read secret-redacted session content until expiry; every read audited",
+        "tags": [
+          "US4"
+        ],
+        "x-story": "US4",
+        "x-roles": [
+          "owner",
+          "admin",
+          "analyst",
+          "viewer"
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "repository_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpanContentList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing/invalid authentication",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden in known scope",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Absent or inaccessible resource",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "State/idempotency conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Stale revision",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload too large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Domain validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Required precondition missing",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Quota/rate limit",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Temporarily unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "x-self-access": true,
+        "description": "ADR-016. Reads one session's secret-redacted content; no route lists or exports content in bulk. Readers: owner and admin; an analyst when the session's project is inside their grant; the developer whose linked contributor identity produced the session, at any internal role (x-self-access: viewer is self-only). Another person's session for an internal viewer, and every session for an is_external principal, return the same 404 as a nonexistent session. Access does not depend on individual_attribution_enabled. Each request, including an empty or denied one, writes exactly one AuditEvent (actor, subject handle, requested resource_id, returned_ids, time); the event is readable by owner/admin only, carries no content and is never shown or sent to the subject; if that write fails the read fails. The page states content_state, content_missing_reason and content_expired_at; items are in span order. Semantics: contracts/README.md."
       }
     },
     "/v1/workspaces/{workspace_id}/links": {
@@ -11321,7 +11567,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Rejects spans_days not greater than session_content_days with 422. A shorter session_content_days applies to content already stored (ADR-016)."
       }
     },
     "/v1/workspaces/{workspace_id}/deletion-requests": {
@@ -19347,6 +19594,63 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "contributor_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contributor_handle": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content_state": {
+            "type": "string",
+            "enum": [
+              "present",
+              "partial",
+              "missing",
+              "expired"
+            ]
+          },
+          "content_missing_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "content_not_sent",
+                  "sender_placeholder"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content_expired_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -19360,7 +19664,12 @@
           "model_ids",
           "coverage",
           "tool_calls",
-          "tool_errors"
+          "tool_errors",
+          "contributor_id",
+          "contributor_handle",
+          "content_state",
+          "content_missing_reason",
+          "content_expired_at"
         ],
         "additionalProperties": false
       },
@@ -19460,6 +19769,157 @@
           "model_id",
           "tool_name",
           "error_class"
+        ],
+        "additionalProperties": false
+      },
+      "SpanContent": {
+        "type": "object",
+        "properties": {
+          "span_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Span.id, the platform UUID of the span row; not the 16-hex OTLP wire span_id"
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "field": {
+            "type": "string",
+            "enum": [
+              "gen_ai.input.messages",
+              "gen_ai.output.messages",
+              "gen_ai.tool.call.arguments",
+              "gen_ai.tool.call.result",
+              "gen_ai.conversation.name",
+              "gen_ai.system_instructions",
+              "exception.message",
+              "status.message"
+            ]
+          },
+          "value_redacted": {
+            "type": "string",
+            "maxLength": 8388608
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "truncated_total_bytes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "redaction_counts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "retention_expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "span_id",
+          "session_id",
+          "field",
+          "value_redacted",
+          "truncated",
+          "truncated_total_bytes",
+          "redaction_counts",
+          "retention_expires_at",
+          "recorded_at"
+        ],
+        "additionalProperties": false
+      },
+      "SpanContentList": {
+        "type": "object",
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "content_state": {
+            "type": "string",
+            "enum": [
+              "present",
+              "partial",
+              "missing",
+              "expired"
+            ]
+          },
+          "content_missing_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "content_not_sent",
+                  "sender_placeholder"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content_expired_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpanContent"
+            },
+            "minItems": 0,
+            "maxItems": 10000
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "session_id",
+          "content_state",
+          "content_missing_reason",
+          "content_expired_at",
+          "items",
+          "next_cursor",
+          "as_of"
         ],
         "additionalProperties": false
       },
@@ -20561,7 +21021,14 @@
           "spans_days": {
             "type": "integer",
             "minimum": 7,
-            "maximum": 90
+            "maximum": 90,
+            "default": 60
+          },
+          "session_content_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 30
           },
           "evidence_days": {
             "type": "integer",
@@ -20581,11 +21048,471 @@
         },
         "required": [
           "spans_days",
+          "session_content_days",
           "evidence_days",
           "exports_days",
           "audit_days"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "spans_days MUST exceed session_content_days so session metadata outlives its content; both clocks start at session end, or the last received span if it never finalizes (ADR-016). A violating request is rejected with 422 and changes nothing.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 7
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 7
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 8
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 8
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 9
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 9
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 10
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 10
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 11
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 11
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 12
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 12
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 13
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 13
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 14
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 14
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 15
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 15
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 16
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 16
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 17
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 17
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 18
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 18
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 19
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 19
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 20
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 20
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 21
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 21
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 22
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 22
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 23
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 23
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 24
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 24
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 25
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 25
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 26
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 26
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 27
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 27
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 28
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 28
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 29
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 29
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "session_content_days": {
+                  "const": 30
+                }
+              },
+              "required": [
+                "session_content_days"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans_days": {
+                  "exclusiveMinimum": 30
+                }
+              }
+            }
+          }
+        ]
       },
       "Retention": {
         "type": "object",
@@ -20593,7 +21520,14 @@
           "spans_days": {
             "type": "integer",
             "minimum": 7,
-            "maximum": 90
+            "maximum": 90,
+            "default": 60
+          },
+          "session_content_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 30
           },
           "evidence_days": {
             "type": "integer",
@@ -20618,6 +21552,7 @@
         },
         "required": [
           "spans_days",
+          "session_content_days",
           "evidence_days",
           "exports_days",
           "audit_days",
@@ -20820,6 +21755,26 @@
             "type": "string",
             "format": "uuid"
           },
+          "subject_contributor_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "returned_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 0,
+            "maxItems": 10000
+          },
           "result": {
             "type": "string",
             "minLength": 1,
@@ -20835,10 +21790,13 @@
           "actor_id",
           "action",
           "resource_id",
+          "subject_contributor_id",
+          "returned_ids",
           "result",
           "occurred_at"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "resource_id is the requested resource. A session-content or coaching read request, including an empty or denied one, writes exactly one event naming the subject, with returned_ids listing the session or finding IDs it returned (0..n) (ADR-016)."
       },
       "DeploymentCreate": {
         "type": "object",

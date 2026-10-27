@@ -89,17 +89,17 @@ query, export, guessed identifier and background job respects authorization.
 
 ### User Story 4 - Observe coding-agent workflows (Priority: P2)
 
-A team installs an explicitly configured collector and investigates errors, token use and
-elapsed session time without sending prompt or code content.
+A team installs an explicitly configured collector and investigates errors, token use, elapsed
+session time and, for up to 30 days, the prompts and tool activity behind them (ADR-016).
 
 **Why this priority**: Git cannot recover activity that was never committed.
-**Independent Test**: Redacted synthetic agent spans exercise ingestion, duplicate replay,
-late arrival, unsupported attributes and missing instrumentation.
+**Independent Test**: Synthetic agent spans with seeded secrets exercise ingestion, content
+redaction and expiry, duplicate replay, late arrival, unsupported attributes and missing instrumentation.
 **Acceptance Scenarios**:
 1. **Given** registered project-scoped ingestion credentials, **when** allowed metadata
    arrives, **then** sessions show model, tool errors, token units and collection coverage.
-2. **Given** prompt text, email or a seeded secret in an unknown attribute, **when** data
-   reaches the ingestion boundary, **then** it is stripped before storage and logs.
+2. **Given** a seeded secret in a prompt and an email in an unknown attribute, **when** ingested,
+   **then** the prompt is stored as session content with the secret redacted and the email dropped.
 3. **Given** duplicate or conflicting span delivery, **when** replayed, **then** duplicates
    are ignored and conflicting revisions are quarantined without double counts.
 4. **Given** an unsupported runtime field, **when** a report is rendered, **then** it is
@@ -268,22 +268,22 @@ a private project identifier never appears in public indexes, logs or exported c
   contributor identity, prompts, source bodies and tool I/O.
 - **FR-017**: Hosted people breakdowns MUST suppress cohorts under five and complementary
   slices; arbitrary identity filters and individual leaderboards MUST be unavailable.
-- **FR-018**: Access, connection changes, policy changes and exports MUST emit content-free
-  audit records with actor, action, scope, time and result.
+- **FR-018**: Access, connection changes, policy changes, exports and session-content reads MUST
+  emit content-free audit records (actor, action, scope, time, result); an unaudited content read fails.
 
 #### US4 — Telemetry
-- **FR-019**: Admins MUST register scoped collectors with runtime/capability metadata and
-  revocable ingestion credentials.
-- **FR-020**: Telemetry MUST use a metadata allowlist and strip sensitive/unknown content
-  before persistence, quarantine, operational logs and report generation.
+- **FR-019**: Admins MUST register scoped collectors with runtime/capability metadata and revocable
+  ingestion credentials; install output (developers) and settings page (admins) state once that content is kept ≤30 days.
+- **FR-020**: Telemetry MUST enforce an attribute allowlist and drop unknown attributes. Session content
+  MUST be secret-redacted, expire per ADR-016, and never enter quarantine, logs, metrics, reports, exports, snapshots, events or published artifacts.
 - **FR-021**: Ingestion MUST retain session, trace, span, source/runtime version and
   event-time identity sufficient for duplicate detection and lineage.
 - **FR-022**: Sessions MUST expose elapsed duration, supported token categories, tool/error
   counts and instrumentation coverage without implying labor or exact billed spend.
 - **FR-023**: Delivery MUST tolerate duplicate/late events; conflicting duplicates MUST
   be quarantined with a safe, content-free diagnostic.
-- **FR-024**: Unsupported fields and collector outages MUST have explicit availability
-  and health states rather than zero-valued observations.
+- **FR-024**: Unsupported fields, missing, partial or expired session content and collector outages
+  MUST have explicit availability and health states rather than zero-valued or empty observations.
 
 #### US5 — Linkage and cost
 - **FR-025**: Session/change/PR relationships MUST record verified or candidate status,
@@ -320,8 +320,8 @@ a private project identifier never appears in public indexes, logs or exported c
   canceled states, attempts, progress, safe errors, cancellation and lease recovery.
 - **FR-040**: Operators MUST observe ingestion lag, freshness, queue age, failure rates and
   resource use without collecting customer payloads into platform telemetry.
-- **FR-041**: Restore procedures MUST reapply deletion tombstones before access and demonstrate
-  documented recovery objectives through a drill.
+- **FR-041**: Restore procedures MUST reapply deletion tombstones and expired session-content purges
+  before access and demonstrate documented recovery objectives through a drill.
 - **FR-042**: Workspaces MUST see configured usage limits and predictable rejection/reset
   behavior; unknown ingestion loss MUST never appear as complete collection.
 
@@ -388,7 +388,9 @@ a private project identifier never appears in public indexes, logs or exported c
 - **NFR-009**: User-facing timestamps MUST identify timezone; stored event instants use UTC
   and all reporting windows are half-open, start inclusive and end exclusive.
 - **NFR-010**: Secrets and content excluded by policy MUST be absent from accepted data,
-  diagnostic logs, dead-letter records, backups and standard exported evidence.
+  diagnostic logs, dead-letter records, backups and standard exported evidence. Session content
+  (ADR-016) is accepted only into its expiring store and MUST be absent from diagnostic logs,
+  dead-letter records and exported evidence.
 - **NFR-011**: All public contracts MUST be versioned; breaking changes require migration,
   compatibility fixtures and a documented deprecation window of at least 90 days.
 - **NFR-012**: Initial deterministic analytics MUST require zero model calls; optional
@@ -397,10 +399,11 @@ a private project identifier never appears in public indexes, logs or exported c
 ### Key Entities
 
 Workspace, Membership, Project, Repository, Connector, Collector, ImportBatch, SourceRevision,
-Job, Session, Span, UsageUnit, PriceVersion, EvidenceLink, AllocationVersion, MetricDefinition,
-MetricResult, Snapshot, ReportDefinition, Schedule, Export, Investigation, AuditEvent,
-RetentionPolicy, DeletionRequest, Deployment, Incident, PolicyVersion, PolicyEvaluation,
-ActionRequest and PublicRepositoryProfile. Detailed fields/invariants are in [data-model.md](data-model.md).
+Job, Session, Span, SpanContent (session content; fields in spec 005), UsageUnit, PriceVersion,
+EvidenceLink, AllocationVersion, MetricDefinition, MetricResult, Snapshot, ReportDefinition,
+Schedule, Export, Investigation, AuditEvent, RetentionPolicy, DeletionRequest, Deployment,
+Incident, PolicyVersion, PolicyEvaluation, ActionRequest and PublicRepositoryProfile. Detailed
+fields/invariants are in [data-model.md](data-model.md).
 
 ## Success Criteria *(mandatory)*
 
@@ -432,7 +435,9 @@ ActionRequest and PublicRepositoryProfile. Detailed fields/invariants are in [da
 - GitHub is the initial hosted source; other Git hosts use future adapters.
 - Existing local report artifacts are research inputs, not approved public demo data.
 - The initial local profile is single-user; the hosted profile uses explicit memberships.
-- Raw prompts, source bodies and individual productivity rankings are outside initial scope.
+- Individual productivity rankings are outside initial scope. Session content, including prompts and
+  tool output, is captured by default and kept at most 30 days (ADR-016); a local workspace keeps
+  it on the machine. Repository source bodies are not collected except where they appear in it.
 - Token estimates and externally supplied billing allocations are separate measures; no
   accounting-grade ROI or invoice reconciliation is claimed without provider billing data.
 - Production integration begins with explicit deployment/incident ingestion, not automatic

@@ -1,0 +1,767 @@
+/*
+ * Overview screen (SPEC §5.1).
+ *
+ * The shapes this screen is made of — the hero, the signal cards, the split
+ * panels, the footer — are the reference design and live in `index.css`. What is
+ * here is only what the reference did not have to solve, because it had no data:
+ * the six-column children table and its reflows, the repository variant of that
+ * panel, the hero's empty variant, the delta chip's three tones, and the
+ * layout-shaped skeletons the two-stage load needs (§4.1).
+ *
+ * Every value is a token from §2.3 or a measurement lifted from the reference so
+ * the two halves sit flush.
+ */
+
+/* ------------------------------------------------------------- link shapes */
+
+/* The mock's cards and rows were buttons. Here they navigate, so they are links:
+   ⌘-click opens a metric in a new tab and the status bar shows where a row goes
+   before the reader commits. The reset keeps the reference's look exactly. */
+/* Colour and underline only. Setting `display` here would out-specify the layout
+   rules these same elements carry (`.ov-row` is a grid) and quietly flatten them. */
+a.ov-row,
+a.ov-exemplar,
+a.evidence-item {
+  color: inherit;
+  text-decoration: none;
+}
+
+a.ov-row:focus-visible,
+a.ov-exemplar:focus-visible,
+a.evidence-item:focus-visible,
+.ov-card-hit:focus-visible,
+.ov-hero:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--focus-ring) 35%, transparent);
+  outline-offset: 2px;
+}
+
+/* The card's link covers the card, so `.metric-card:hover` still fires from it and
+   the reference's lift is unchanged; the ⌗ sits above it as the second tab stop. */
+.ov-card {
+  position: relative;
+}
+.ov-card-hit {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+}
+/* The ⌗ has to sit above the card's own link to stay a separate target. */
+.ov-card .wk-trigger {
+  position: relative;
+  z-index: 2;
+}
+.ov-card:active {
+  transform: scale(0.985);
+}
+
+/* --------------------------------------------------------- page heading */
+
+.ov-heading-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 9px;
+  padding: 3px 8px;
+  color: var(--accent-ink);
+  background: var(--surface-tint);
+  border-radius: 6px;
+  font:
+    700 9px/1.4 "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  vertical-align: middle;
+}
+.ov-heading-chip:hover {
+  background: var(--surface-3);
+}
+
+/* ------------------------------------------------------------ the hero */
+
+.ov-hero {
+  position: relative;
+}
+.ov-hero:focus {
+  outline: none;
+}
+
+/*
+ * 320px guard (§7.1). The hero's label row is a flex line and its parent track is
+ * `1fr`, i.e. `minmax(auto, 1fr)` — so an unwrappable line sets the track's floor
+ * and the whole panel pushes past the viewport. The reference never hit this
+ * because its label was three words; this one adds the finding's scope, which at
+ * `mitmproxy/mitmproxy` is another 130px. Wrapping the line, and letting the grid
+ * items shrink, keeps the panel inside the page at every width.
+ */
+.finding-main,
+.finding-aside,
+.finding-aside > * {
+  min-width: 0;
+}
+.finding-label {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.finding-actions {
+  flex-wrap: wrap;
+  row-gap: 12px;
+}
+.finding-stat > span,
+.finding-stat small,
+.ov-hero-exemplar {
+  overflow-wrap: anywhere;
+}
+
+/* The severity bullet is the reference's amber dot, made to track the finding it
+   labels instead of being fixed to one severity. */
+.critical-bullet.ov-bullet--critical {
+  background: #edaa77;
+  box-shadow: 0 0 0 4px rgba(237, 170, 119, 0.15);
+}
+.critical-bullet.ov-bullet--warning {
+  background: #e8c77a;
+  box-shadow: 0 0 0 4px rgba(232, 199, 122, 0.15);
+}
+.critical-bullet.ov-bullet--info {
+  background: #9fc0e8;
+  box-shadow: 0 0 0 4px rgba(159, 192, 232, 0.15);
+}
+.critical-bullet.ov-bullet--none {
+  background: #a7d9c4;
+  box-shadow: 0 0 0 4px rgba(167, 217, 196, 0.15);
+}
+
+.ov-hero-scope {
+  margin-left: 7px;
+  padding: 2px 7px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.13);
+  border-radius: 5px;
+  font:
+    700 9px "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  text-decoration: none;
+}
+.ov-hero-scope:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* The aside's figures come from the dataset's own display strings, so the `≥` a
+   floor carries has to sit at the figure's own size rather than shrink to an
+   ornament (§6.3). */
+.finding-stat strong .floor-figure {
+  display: inline;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.finding-stat strong .floor-figure__prefix {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.ov-hero-exemplar {
+  display: block;
+  color: #fff;
+  font:
+    700 21px/1.1 "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: -0.05em;
+  text-decoration: none;
+}
+.ov-hero-exemplar:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Reserve the slot the exemplar will fill. The finding's own scope report is a
+   second file, and a stat that appears later must not push the pager around. */
+.ov-hero-stat-slot {
+  min-height: 58px;
+}
+
+.ov-hero-pending {
+  display: block;
+  width: 96px;
+  height: 21px;
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+}
+
+.ov-hero-empty-facts {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+.ov-hero-empty-facts > div {
+  display: flex;
+  flex-direction: column;
+}
+.ov-hero-empty-facts span {
+  color: var(--hero-body-text);
+  font-size: 10px;
+}
+.ov-hero-empty-facts strong {
+  margin-top: 5px;
+  color: #fff;
+  font:
+    700 21px/1 "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: -0.07em;
+}
+
+/* ------------------------------------------------------- signal cards */
+
+.delta--positive {
+  color: var(--tier-measured);
+}
+.delta--negative {
+  color: var(--sev-warning);
+}
+.delta--neutral {
+  color: var(--text-3);
+}
+/* `.delta` is an inline-flex row, so the whitespace between the figure and its
+   label is stripped; the gap has to be drawn rather than typed. */
+.delta__label {
+  margin-left: 4px;
+  color: var(--text-3);
+  font-weight: 500;
+}
+
+.ov-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ov-card-value {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+/* The reference's 27px mono figure, reached through FloorFigure so the `≥` cannot
+   be forgotten at this call site (§6.3). */
+.metric-value-row .floor-figure {
+  color: var(--text);
+  font:
+    700 27px/1 "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: -0.09em;
+}
+
+.ov-card-na {
+  margin-top: 7px;
+}
+
+/* ------------------------------------------------- children scope table */
+
+.ov-table {
+  margin-top: 17px;
+}
+
+/*
+ * §5.6 names six columns; this panel is 1.39fr of the split and never gets wider
+ * than about 630px, which is exactly enough for all six and not a pixel more. So
+ * six is the wide case and four is the default — Repository, Review coverage,
+ * Lead time p50, Status, which is the reference's own set. Nothing is lost:
+ * Contributors and Open PRs are on the Repositories screen this panel links to and
+ * on each repository's own overview (§7.4's rule, applied to a narrower container).
+ */
+.ov-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 1.5fr) minmax(112px, 1fr) minmax(
+      64px,
+      0.62fr
+    ) 72px;
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  min-height: 45px;
+  padding: 0 5px;
+  color: var(--text-2);
+  background: transparent;
+  border-top: 1px solid var(--border-soft);
+  text-align: left;
+  transition: background 0.16s ease;
+}
+a.ov-row:hover {
+  background: var(--surface-hover);
+}
+a.ov-row:active {
+  background: var(--surface-3);
+}
+
+/* Column names are the widest thing in their column at some widths; they clip
+   rather than run into the next one. The full name is in the table below it. */
+.ov-head > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ov-head {
+  min-height: 27px;
+  color: var(--text-3);
+  border-top: 0;
+  font:
+    700 8px "DM Mono",
+    ui-monospace,
+    monospace;
+  /* Tighter than the reference's .06em: at the narrow end of each band the six
+     column names are the widest thing in the panel, and tracking is the only part
+     of them that can give without shortening what the column is called. */
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ov-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 0 5px 6px;
+  color: var(--text-3);
+  font:
+    700 8px "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ov-group::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-soft);
+}
+.ov-group a {
+  color: inherit;
+  text-decoration: none;
+}
+.ov-group a:hover {
+  color: var(--accent-ink);
+}
+
+.ov-name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.ov-name > span:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+.ov-name strong {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-name small {
+  color: var(--text-3);
+  font-size: 9px;
+}
+
+.ov-review {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ov-figure {
+  color: var(--text-2);
+  font:
+    700 9px "DM Mono",
+    ui-monospace,
+    monospace;
+  font-variant-numeric: tabular-nums;
+}
+.ov-figure .floor-figure {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+/* Absence is never a zero and never an empty cell (§0.1, §6.4). The full
+   `NotAvailable` treatment needs a whole `Metric` — its reason line comes from the
+   metric's caveats — and a table row holds only the edition's summary of one. So
+   the cell renders the same words in the same italic, and the reason is one tap
+   away in the row's own scope. */
+.ov-na {
+  color: var(--text-3);
+  font:
+    italic 400 9px/1.3 "DM Sans",
+    sans-serif;
+}
+
+.ov-empty {
+  margin: 18px 5px 6px;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------ "Inside this repository" */
+
+.ov-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 17px;
+  overflow: hidden;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+.ov-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 13px;
+  background: var(--surface);
+}
+.ov-facts strong {
+  color: var(--text);
+  font:
+    700 17px/1 "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: -0.06em;
+}
+.ov-facts small {
+  color: var(--text-3);
+  font-size: 9px;
+}
+
+.ov-exemplars-title {
+  margin: 22px 0 0;
+  color: var(--text-3);
+  font:
+    700 8px/1.2 "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ov-exemplar {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  margin-top: 9px;
+  padding: 11px 12px;
+  background: var(--tier-proxy-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+a.ov-exemplar:hover {
+  border-color: var(--accent-border-hover);
+  transform: translateY(-1px);
+}
+a.ov-exemplar:active {
+  transform: scale(0.995);
+}
+
+.ov-exemplar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--tier-proxy);
+  background: color-mix(in srgb, var(--tier-proxy) 14%, transparent);
+  border-radius: 7px;
+}
+.ov-exemplar-body {
+  min-width: 0;
+}
+.ov-exemplar-metric {
+  color: var(--text-3);
+  font:
+    700 8px "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ov-exemplar-headline {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.ov-exemplar-weight {
+  flex: none;
+  color: var(--tier-proxy);
+  font:
+    700 9px "DM Mono",
+    ui-monospace,
+    monospace;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------- evidence panel */
+
+.ov-evidence-item {
+  width: 100%;
+}
+a.evidence-item {
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------ footer */
+
+.page-footer a {
+  color: var(--accent-ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --------------------------------------------------- states (§4.1, §4.2) */
+
+.ov-skeleton-hero {
+  height: 242px;
+  margin-top: 22px;
+  border-radius: 11px;
+}
+.ov-skeleton-card {
+  height: 168px;
+  border-radius: 9px;
+}
+.ov-skeleton-row {
+  height: 45px;
+  margin-top: 6px;
+  border-radius: 7px;
+}
+
+.ov-error {
+  margin-top: 22px;
+  padding: 26px 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+.ov-error h2 {
+  margin: 0;
+  color: var(--text);
+  font:
+    600 25px/1.1 "Fraunces",
+    Georgia,
+    serif;
+  letter-spacing: -0.035em;
+}
+.ov-error code {
+  display: inline-block;
+  margin-top: 11px;
+  padding: 7px 9px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 6px;
+  font:
+    10px "DM Mono",
+    ui-monospace,
+    monospace;
+  overflow-wrap: anywhere;
+}
+.ov-error p {
+  max-width: 62ch;
+  margin: 12px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.ov-error-actions {
+  display: flex;
+  gap: 9px;
+  margin-top: 17px;
+}
+
+/* Cell labels exist only in the ≤510 card layout; above it the column head
+   carries the name, so a second copy would be read twice. */
+.ov-cell-label {
+  display: none;
+  overflow: hidden;
+  margin-bottom: 5px;
+  color: var(--text-3);
+  font:
+    700 8px/1.2 "DM Mono",
+    ui-monospace,
+    monospace;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------ reflows */
+
+/* The two extra columns exist only where they measurably fit. */
+.ov-row > :nth-child(4),
+.ov-row > :nth-child(5) {
+  display: none;
+}
+
+@media (min-width: 1401px) {
+  .ov-row {
+    grid-template-columns:
+      minmax(130px, 1.3fr) minmax(112px, 1fr) minmax(70px, 0.62fr)
+      minmax(64px, 0.58fr) minmax(50px, 0.5fr) 72px;
+  }
+  .ov-row > :nth-child(4),
+  .ov-row > :nth-child(5) {
+    display: block;
+  }
+}
+
+/*
+ * The split stacks earlier than the reference's 780px.
+ *
+ * Measured: between 1081 and 1200 the left panel is 377–447px of usable width,
+ * which is under what four columns of the scope table need — and the alternative,
+ * an inner sideways scroll, is the one thing §7.1 rules out. Stacking gives the
+ * table the whole content column there, and the evidence panel reads perfectly
+ * well beneath it.
+ */
+@media (max-width: 1200px) {
+  /* Out-specifies `index.css`'s own `.split-section`, which carries the two-up
+     grid down to 780px. */
+  .section-block.split-section {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1080px) {
+  .ov-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/*
+ * Repository · Review coverage · Status (§7.4).
+ *
+ * The switch is at 820 rather than §7.1's 780 because that is where it measurably
+ * belongs: between 781 and 820 the stacked panel is 427–465px, and the fourth
+ * column's name no longer fits its track. Lead time is on the repository's own
+ * overview, one tap down the row this replaces.
+ */
+@media (max-width: 820px) {
+  .ov-row {
+    grid-template-columns: minmax(130px, 1.5fr) minmax(110px, 1fr) 72px;
+  }
+  .ov-row > :nth-child(3) {
+    display: none;
+  }
+}
+
+/* §7.6: touch targets and the reflowed hero aside. */
+@media (max-width: 780px) {
+  .ov-row {
+    min-height: 48px;
+  }
+  .ov-hero-empty-facts {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ≤510: rows become cards — nothing scrolls sideways and nothing is lost, since
+   every dropped column is on the repository's own overview (§7.1, §7.4). */
+@media (max-width: 510px) {
+  .ov-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: 11px 10px;
+    min-height: 0;
+    padding: 14px 5px;
+  }
+  .ov-head {
+    display: none;
+  }
+  .ov-name {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    align-items: flex-start;
+  }
+  .ov-review {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .ov-review .mini-progress {
+    flex: 1;
+    width: auto;
+  }
+  /* Status right of the name; then the three facts §7.4 names, in one row. */
+  .ov-row > :nth-child(6) {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .ov-row > :nth-child(3) {
+    display: block;
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .ov-row > :nth-child(4) {
+    display: block;
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .ov-row > :nth-child(5) {
+    display: block;
+    grid-column: 3;
+    grid-row: 3;
+  }
+  /* One line each, so the three facts' figures sit on a shared baseline. */
+  .ov-cell-label {
+    display: block;
+  }
+  .ov-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ov-exemplar {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+  .ov-exemplar-weight {
+    grid-column: 2;
+    text-align: left;
+  }
+  .finding-nav button {
+    width: 44px;
+    height: 44px;
+  }
+  .ov-error {
+    padding: 22px 18px;
+  }
+}
+
+@media print {
+  .finding-nav,
+  .heading-actions,
+  .ov-error-actions {
+    display: none !important;
+  }
+  .finding-hero {
+    box-shadow: none;
+  }
+}

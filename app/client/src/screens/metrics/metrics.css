@@ -1,0 +1,1091 @@
+/*
+ * Metrics index and metric detail — SPEC §5.3, §5.4, §7.4, §7.5.
+ *
+ * Two layout problems are solved here, and both have a stated answer in the spec
+ * rather than an improvised one:
+ *
+ *   1. **57 rows × 5 columns at 390px.** Horizontal scrolling was rejected (§7.1):
+ *      the table drops Trend and Sample at ≤780 (both are one tap away in the
+ *      drawer and on the detail page) and becomes a two-line list row at ≤510.
+ *      One DOM, one set of semantics — the `<table>` keeps explicit ARIA roles so
+ *      flipping its display to grid cannot strip them.
+ *   2. **A figure and its working, side by side.** 7:5 at ≥1081 with the working
+ *      column sticky; stacked below that, the reading first.
+ *
+ * Everything is token-driven, so dark mode is the same rules with C0's other
+ * palette — there is no `.dark` block in this file and there should never be one.
+ */
+
+/* ============================================================ index page */
+
+/* The tier legend that ends the lede (§5.3). Counts come from the scope's own
+   summary; the sentence each chip discloses is `data_quality.tier_legend`. */
+.mx-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin-top: 13px;
+}
+.mx-legend__label {
+  color: var(--text-3);
+  font: 700 9px/1.3 "DM Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.mx-legend__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: border-color 0.18s ease;
+}
+.mx-legend__chip[data-tier="measured"] {
+  color: var(--tier-measured);
+  background: var(--tier-measured-bg);
+}
+.mx-legend__chip[data-tier="proxy"] {
+  color: var(--tier-proxy);
+  background: var(--tier-proxy-bg);
+}
+.mx-legend__chip[data-tier="inferred"] {
+  color: var(--tier-inferred);
+  background: var(--tier-inferred-bg);
+}
+.mx-legend__chip:hover {
+  border-color: currentColor;
+}
+.mx-legend__count {
+  color: inherit;
+  opacity: 0.78;
+  font-weight: 500;
+}
+.mx-legend__sentence {
+  flex: 1 1 100%;
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------- controls */
+
+.mx-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 26px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.mx-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mx-control-label {
+  color: var(--text-3);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.mx-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.mx-search > svg:first-child {
+  position: absolute;
+  left: 9px;
+  color: var(--ornament);
+  pointer-events: none;
+}
+.mx-search input {
+  width: 218px;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 30px 0 28px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.mx-search input::placeholder {
+  color: var(--text-3);
+}
+.mx-search input:hover {
+  border-color: var(--accent-border-hover);
+}
+.mx-search input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--focus-ring) 35%, transparent);
+  outline-offset: 1px;
+  border-color: var(--accent-border-hover);
+}
+.mx-search__clear {
+  position: absolute;
+  right: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-3);
+  background: transparent;
+  border-radius: 5px;
+}
+.mx-search__clear:hover {
+  color: var(--accent-ink);
+  background: var(--surface-hover);
+}
+
+.mx-tier-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mx-tier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+.mx-tier-chip:hover {
+  border-color: var(--accent-border-hover);
+  color: var(--accent-ink);
+}
+.mx-tier-chip:active {
+  transform: scale(0.97);
+}
+.mx-tier-chip__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.mx-tier-chip[data-tier="measured"] .mx-tier-chip__dot {
+  background: var(--tier-measured);
+}
+.mx-tier-chip[data-tier="proxy"] .mx-tier-chip__dot {
+  background: var(--tier-proxy);
+}
+.mx-tier-chip[data-tier="inferred"] .mx-tier-chip__dot {
+  background: var(--tier-inferred);
+}
+.mx-tier-chip[aria-pressed="true"] {
+  color: var(--accent-ink);
+  background: var(--surface-tint);
+  border-color: var(--accent-border-hover);
+}
+/* §8.6: the selected chip's tick fades in — opacity, never a path draw. */
+.mx-tier-chip__tick {
+  display: inline-flex;
+  opacity: 0;
+  width: 0;
+  transition:
+    opacity 0.18s ease,
+    width 0.18s ease;
+}
+.mx-tier-chip[aria-pressed="true"] .mx-tier-chip__tick {
+  opacity: 1;
+  width: 11px;
+}
+
+/* ------------------------------------------------------- family jump nav */
+
+.mx-familynav {
+  position: sticky;
+  z-index: 15;
+  top: 64px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 -6px;
+  padding: 10px 6px;
+  background: color-mix(in srgb, var(--background) 88%, transparent);
+  backdrop-filter: blur(10px);
+}
+.mx-familynav__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 27px;
+  padding: 0 10px;
+  color: var(--text-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+.mx-familynav__pill:hover {
+  color: var(--accent-ink);
+  border-color: var(--accent-border-hover);
+}
+.mx-familynav__pill[aria-current="true"] {
+  color: var(--accent-ink);
+  background: var(--surface-tint);
+  border-color: var(--accent-border-hover);
+}
+.mx-familynav__count {
+  color: var(--text-3);
+  font: 700 9px "DM Mono", monospace;
+}
+/* Two spellings of the same name: the full label above 510px, the first word
+   below it. Eight full labels pin four rows deep at 390px, which is a third of
+   the viewport spent on a jump nav. */
+.mx-familynav__short {
+  display: none;
+}
+
+/* ------------------------------------------------------- family sections */
+
+.mx-family {
+  margin-top: 34px;
+}
+.mx-family__header {
+  /* Scroll target lands below the sticky top bar and the sticky jump nav. */
+  scroll-margin-top: 124px;
+  padding-bottom: 10px;
+}
+.mx-family__title {
+  margin: 0;
+  color: var(--text);
+  font: 600 20px/1.1 "Fraunces", Georgia, serif;
+  letter-spacing: -0.028em;
+}
+.mx-family__blurb {
+  max-width: 640px;
+  margin: 7px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------- table */
+
+.mx-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.mx-table thead th {
+  height: 27px;
+  padding: 0 8px;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.mx-table th.mx-col-value,
+.mx-table th.mx-col-sample {
+  text-align: left;
+}
+.mx-row {
+  position: relative;
+  height: 48px;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background 0.16s ease;
+}
+.mx-row:hover {
+  background: var(--surface-hover);
+}
+.mx-row td {
+  padding: 0 8px;
+  vertical-align: middle;
+}
+
+/* The row is one link, stretched over the whole row (§5.3: "Row is a button →
+   metric detail"). An anchor rather than a button so ⌘-click, middle-click and
+   "copy link address" all work on the product's most quotable destination — and
+   so Enter follows the row without a keydown handler. The ⌗ in the value cell
+   sits above the overlay with its own tab stop. */
+.mx-row__link {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.mx-row__link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.mx-row__link:focus-visible {
+  outline: none;
+}
+.mx-row__link:focus-visible::after {
+  outline: 3px solid color-mix(in srgb, var(--focus-ring) 45%, transparent);
+  outline-offset: -3px;
+  border-radius: 6px;
+}
+.mx-row__label {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mx-row:hover .mx-row__label {
+  color: var(--accent-ink);
+}
+.mx-row__id {
+  overflow: hidden;
+  color: var(--text-3);
+  font: 500 9px "DM Mono", monospace;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mx-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.mx-value__figure {
+  overflow: hidden;
+  color: var(--text);
+  font: 700 12px "DM Mono", monospace;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The ⌗ is always visible — §0.1 forbids anything that exists only on hover. It
+   is raised above the row's stretched link so it keeps its own destination. */
+.mx-value .wk-trigger {
+  position: relative;
+  z-index: 1;
+  flex: none;
+}
+.mx-trend {
+  display: flex;
+  align-items: center;
+  width: 64px;
+  height: 24px;
+}
+.mx-trend .sparkline {
+  width: 64px;
+}
+.mx-sample {
+  display: block;
+  overflow: hidden;
+  color: var(--text-3);
+  font: 500 9px "DM Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mx-sample--coverage {
+  display: none;
+}
+
+/* --------------------------------------------------------- index states */
+
+.mx-empty {
+  margin-top: 26px;
+  padding: 24px 24px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+.mx-empty h2 {
+  margin: 0;
+  color: var(--text);
+  font: 600 20px/1.1 "Fraunces", Georgia, serif;
+  letter-spacing: -0.028em;
+}
+.mx-empty p {
+  max-width: 520px;
+  margin: 9px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.mx-empty button {
+  margin-top: 16px;
+}
+.mx-count {
+  margin: 18px 0 0;
+  color: var(--text-3);
+  font: 500 10px "DM Mono", monospace;
+}
+
+/* =========================================================== detail page */
+
+.mp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3);
+  background: transparent;
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.13em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.18s ease;
+}
+.mp-back:hover {
+  color: var(--accent-ink);
+}
+.mp-kicker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  color: var(--text-3);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.mp-kicker__scope {
+  color: var(--accent-ink);
+}
+.mp-heading h1 {
+  max-width: 760px;
+}
+.mp-value-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+/* A not-available figure carries its reason on a second and third line, so the
+   badge sits with the words rather than floating at the middle of a paragraph. */
+.mp-value-row[data-na="true"] {
+  align-items: flex-start;
+}
+.mp-value-row[data-na="true"] .tier-badge-group {
+  margin-top: 5px;
+}
+.mp-value {
+  color: var(--text);
+  font: 700 44px/1 "DM Mono", monospace;
+  letter-spacing: -0.1em;
+}
+.mp-value .not-available--stat {
+  letter-spacing: 0;
+}
+.mp-unit {
+  color: var(--text-3);
+  font: 500 11px "DM Mono", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The finding that names this metric, above the columns (§5.4). C8 owns the full
+   finding card; this is the compact restatement the metric page needs, and it
+   restates the rule rather than characterising the reading. */
+.mp-finding {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 26px;
+  padding: 17px 19px 16px 22px;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+.mp-finding::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+}
+.mp-finding[data-severity="critical"]::before {
+  background: var(--sev-critical);
+}
+.mp-finding[data-severity="warning"]::before {
+  background: var(--sev-warning);
+}
+.mp-finding[data-severity="info"]::before {
+  background: var(--sev-info);
+}
+.mp-finding__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.mp-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.mp-sev[data-severity="critical"] {
+  color: var(--sev-critical);
+  background: var(--sev-critical-bg);
+}
+.mp-sev[data-severity="warning"] {
+  color: var(--sev-warning);
+  background: var(--sev-warning-bg);
+}
+.mp-sev[data-severity="info"] {
+  color: var(--sev-info);
+  background: var(--sev-info-bg);
+}
+.mp-finding__rule {
+  color: var(--text-3);
+  font: 500 9px "DM Mono", monospace;
+}
+.mp-finding h2 {
+  margin: 0;
+  color: var(--text);
+  font: 600 18px/1.15 "Fraunces", Georgia, serif;
+  letter-spacing: -0.03em;
+}
+.mp-finding p {
+  max-width: 700px;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.mp-columns {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 22px;
+  margin-top: 30px;
+  /* Columns stay stretched on purpose: a sticky panel can only travel inside a
+     parent taller than itself, and `align-items: start` would shrink the right
+     column to the panel's own height and pin it to nothing. */
+  align-items: stretch;
+}
+.mp-column {
+  min-width: 0;
+}
+.mp-panel {
+  padding: 22px 22px 19px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+.mp-panel + .mp-panel {
+  margin-top: 14px;
+}
+.mp-panel h2 {
+  margin: 0;
+  color: var(--text);
+  font: 600 17px/1.15 "Fraunces", Georgia, serif;
+  letter-spacing: -0.03em;
+}
+.mp-prose {
+  margin: 10px 0 0;
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.mp-prose--small {
+  font-size: 13px;
+}
+/* `how_to_read` in the tinted quote treatment (§5.4). */
+.mp-quote {
+  position: relative;
+  margin-top: 11px;
+  padding: 17px 17px 15px 30px;
+  background: var(--surface-tint);
+  border-radius: 8px;
+}
+.mp-quote__mark {
+  position: absolute;
+  top: 11px;
+  left: 12px;
+  color: var(--accent-border-hover);
+  font: 700 21px/1 "Fraunces", Georgia, serif;
+}
+.mp-quote p {
+  margin: 0;
+  color: var(--accent-ink);
+  font: italic 13px/1.55 "Fraunces", Georgia, serif;
+}
+
+.mp-chart-note {
+  margin: 9px 0 0;
+  color: var(--text-3);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* Cross-scope strip — scope comparison, which is allowed; never people (§5.4). */
+.mp-scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 13px;
+}
+.mp-scope-card {
+  display: flex;
+  flex: 1 1 150px;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px 13px 11px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+a.mp-scope-card:hover {
+  border-color: var(--accent-border-hover);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-2px);
+}
+a.mp-scope-card:active {
+  transform: scale(0.985);
+}
+.mp-scope-card[data-current="true"] {
+  background: var(--surface-tint);
+  border-color: var(--accent-border-hover);
+}
+.mp-scope-card__label {
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mp-scope-card__value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+  font: 700 15px "DM Mono", monospace;
+  letter-spacing: -0.05em;
+}
+.mp-scope-card__dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.mp-scope-card__dot[data-tier="measured"] {
+  background: var(--tier-measured);
+}
+.mp-scope-card__dot[data-tier="proxy"] {
+  background: var(--tier-proxy);
+}
+.mp-scope-card__dot[data-tier="inferred"] {
+  background: var(--tier-inferred);
+}
+.mp-scope-card__absent {
+  color: var(--text-3);
+  font: italic 11px "DM Sans", sans-serif;
+}
+.mp-scope-card__here {
+  color: var(--accent-ink);
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The working column, sticky beside the reading at ≥1081 (§5.4). */
+.mp-working {
+  position: sticky;
+  top: 84px;
+  max-height: calc(100vh - 104px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px 20px 19px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+.mp-working__head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent-ink);
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.mp-working__caption {
+  margin: 10px 0 4px;
+  color: var(--text-2);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.mp-na-panel {
+  margin-top: 14px;
+  padding: 18px 19px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.mp-na-panel h2 {
+  margin: 0;
+  color: var(--text);
+  font: 600 17px/1.15 "Fraunces", Georgia, serif;
+  letter-spacing: -0.03em;
+}
+.mp-na-panel p {
+  margin: 9px 0 0;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+/* --------------------------------------------------------- shared states */
+
+.mx-panel-error {
+  margin-top: 26px;
+  padding: 22px 23px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  box-shadow: var(--shadow-card);
+}
+.mx-panel-error h2 {
+  margin: 0;
+  color: var(--text);
+  font: 600 19px/1.15 "Fraunces", Georgia, serif;
+  letter-spacing: -0.03em;
+}
+.mx-panel-error p {
+  max-width: 560px;
+  margin: 9px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.mx-panel-error code {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 6px 9px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 6px;
+  font: 10px "DM Mono", monospace;
+}
+.mx-panel-error .primary-button {
+  margin-top: 16px;
+}
+
+.mx-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 48px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+/* ============================================================ responsive */
+
+@media (max-width: 1080px) {
+  .mp-columns {
+    grid-template-columns: 1fr;
+  }
+  /* The Compact band (781-1080) keeps the 248px sidebar, so the content well is
+     473px at 781 -- narrower than the table's 596px intrinsic width, and the
+     document scrolled sideways. §7.4 only shed columns at <=780, which left this
+     band with every desktop column and no room for them. Trend goes first: it is
+     the one column whose information is fully present elsewhere (the sparkline
+     repeats on the metric page and in the drawer), so dropping it costs a
+     reader nothing they cannot reach in one tap. */
+  .mx-col-trend,
+  .mx-cell-trend,
+  .mx-col-sample,
+  .mx-cell-sample {
+    display: none;
+  }
+  .mx-table {
+    /* Fixed layout plus an explicit 100% stops the remaining five columns
+       negotiating their own intrinsic width: at 781 they settled 5px past the
+       well even after Trend left. Cells truncate rather than the page moving. */
+    table-layout: fixed;
+    width: 100%;
+    max-width: 100%;
+  }
+  .mx-table th,
+  .mx-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* The controls row was the real overflow here, not the table: the search field
+     and the three tier chips stayed on one 255px line until <=780, so at 781 they
+     ran 20px past the well. They reflow with the table rather than a breakpoint
+     later. */
+  .mx-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 11px;
+  }
+  .mx-search {
+    flex: 1;
+  }
+  .mx-search input {
+    width: 100%;
+  }
+  .mx-tier-filter {
+    flex-wrap: wrap;
+  }
+  /* Sticky only works beside something taller than itself; stacked, it is just a
+     panel (§5.4 makes the sticky behaviour a ≥1081 rule). */
+  .mp-working {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 780px) {
+  .mx-familynav {
+    top: 58px;
+  }
+  .mx-family__header {
+    scroll-margin-top: 118px;
+  }
+  .mx-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 11px;
+  }
+  .mx-search {
+    flex: 1;
+  }
+  .mx-search input {
+    width: 100%;
+  }
+  .mx-tier-filter {
+    flex-wrap: wrap;
+  }
+  /* §7.4: Trend and Sample leave the table — both remain one tap away, in the
+     drawer and on the metric page. */
+  .mx-col-trend,
+  .mx-cell-trend,
+  .mx-col-sample,
+  .mx-cell-sample {
+    display: none;
+  }
+  .mx-row,
+  .mx-table thead th {
+    height: 52px;
+  }
+  .mx-value .wk-trigger {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .mp-value {
+    font-size: 38px;
+  }
+  .mp-scope-card {
+    flex-basis: 100%;
+  }
+}
+
+@media (max-width: 510px) {
+  /*
+   * §7.4's real answer at 390px: the 6-column table becomes a two-line list row.
+   * Display is flipped to grid, so every element carries an explicit ARIA role —
+   * without them the table's implicit roles would vanish with its display type.
+   */
+  .mx-table,
+  .mx-table tbody,
+  .mx-table td {
+    display: block;
+  }
+  .mx-table thead {
+    display: none;
+  }
+  /* Full-bleed dividers: the row's rule runs to both page edges (content-wrap
+     pads 18px at this width), while the content stays inside the measure. */
+  .mx-table {
+    width: calc(100% + 36px);
+    margin-left: -18px;
+  }
+  /* `tr.mx-row` rather than `.mx-row`: the block-display rule above is written
+     against `.mx-table tr` elsewhere in this file, and a row that lost this
+     fight would stack its five cells vertically instead of forming two lines. */
+  tr.mx-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    align-content: center;
+    gap: 4px 10px;
+    height: auto;
+    min-height: 56px;
+    /* The right gutter is the ⌗'s 44px touch target, which is lifted out of the
+       flow and centred on the row so the two lines stay 56px rather than being
+       pushed to 90 by a target that is taller than the text beside it (§7.6). */
+    padding: 6px 62px 6px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .mx-value .wk-trigger {
+    position: absolute;
+    top: 50%;
+    right: 9px;
+    transform: translateY(-50%);
+  }
+  .mx-row td {
+    padding: 0;
+  }
+  /* The flip to `display: block` above outranks the ≤780 rule that dropped the
+     Trend column, so the column is dropped again at this specificity — otherwise
+     it lands in a third grid row and the two-line row silently becomes three. */
+  .mx-table td.mx-cell-trend {
+    display: none;
+  }
+  .mx-cell-metric {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+  .mx-cell-value {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .mx-cell-tier {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .mx-cell-sample {
+    display: block;
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    min-width: 0;
+  }
+  /* The id line goes; the label carries the row and the id is on the page it
+     opens. Coverage replaces the sample line — the same sample, stated in the
+     shape that fits (§7.4). */
+  .mx-row__id,
+  .mx-sample--full {
+    display: none;
+  }
+  .mx-sample--coverage {
+    display: block;
+  }
+  .mx-row__label {
+    font-size: 13px;
+  }
+  .mx-value {
+    justify-content: flex-end;
+  }
+  .mx-value__figure {
+    font-size: 13px;
+  }
+  .mx-familynav {
+    gap: 5px;
+    padding: 8px 6px;
+  }
+  .mx-familynav__pill {
+    height: 26px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+  .mx-familynav__full {
+    display: none;
+  }
+  .mx-familynav__short {
+    display: inline;
+  }
+  .mx-family {
+    margin-top: 26px;
+  }
+  /* Family sections become sticky-header groups (§7.4). The offset is the top
+     bar plus the jump strip, whose height is measured and published as a
+     custom property — the strip wraps to two rows at this width. */
+  .mx-family__header {
+    position: sticky;
+    z-index: 10;
+    top: calc(58px + var(--mx-strip-height, 47px));
+    margin: 0 -18px;
+    padding: 10px 18px 9px;
+    background: color-mix(in srgb, var(--background) 92%, transparent);
+    backdrop-filter: blur(10px);
+    scroll-margin-top: calc(58px + var(--mx-strip-height, 47px));
+  }
+  .mx-family__title {
+    font-size: 18px;
+  }
+  .mx-family__blurb {
+    display: none;
+  }
+  .mp-value {
+    font-size: 34px;
+  }
+  .mp-panel {
+    padding: 19px 17px 16px;
+  }
+  .mp-working {
+    padding: 19px 15px 16px;
+  }
+}
+
+/* §8.10 — the reveal collapses to nothing rather than becoming a shorter slide. */
+@media (prefers-reduced-motion: reduce) {
+  .mx-tier-chip__tick,
+  a.mp-scope-card:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media print {
+  .mx-familynav,
+  .mx-controls,
+  .mx-search__clear {
+    display: none;
+  }
+  .mp-working {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}

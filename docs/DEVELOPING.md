@@ -169,4 +169,4 @@ The ADRs that constrain the most code:
 - [ADR-012](adr/ADR-012-organization-aggregation-tier.md) — why a scope is recomputed, never averaged
 - [ADR-013](adr/ADR-013-person-scope-gating.md) — why no ranking primitive exists
 - [ADR-014](adr/ADR-014-published-artifact.md) — why publication is not an export
-- [ADR-015](adr/ADR-015-tiered-content-capture.md) — content capture tiers
+- [ADR-016](adr/ADR-016-session-content-and-model-coaching.md) — session content captured for 30 days; model-based coaching (supersedes ADR-015)

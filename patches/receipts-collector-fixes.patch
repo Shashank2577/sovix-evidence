@@ -1,0 +1,562 @@
+diff --git a/receipts/collect/gitlog.py b/receipts/collect/gitlog.py
+index 9cf88a3..21bd074 100644
+--- a/receipts/collect/gitlog.py
++++ b/receipts/collect/gitlog.py
+@@ -31,7 +31,14 @@ _RECORD_SEP = "\x1e"
+ _FIELD_SEP = "\x1f"
+ _LOG_FORMAT = (
+     f"{_RECORD_SEP}%H{_FIELD_SEP}%P{_FIELD_SEP}%an{_FIELD_SEP}%ae{_FIELD_SEP}"
+-    f"%aI{_FIELD_SEP}%s{_FIELD_SEP}%B{_FIELD_SEP}"
++    f"%aI{_FIELD_SEP}%cI{_FIELD_SEP}%s{_FIELD_SEP}%B{_FIELD_SEP}"
++)
++
++#: Printed in the exclusion report for lines attributed to a shallow clone's
++#: fetch boundary rather than to authored work.
++_BOUNDARY_REASON = (
++    "history boundary of a shallow clone \u2014 the whole tree reads as added "
++    "because the parent commit was never fetched"
+ )
+ 
+ _REVERT_SHA = re.compile(r"This reverts commit ([0-9a-f]{7,40})", re.IGNORECASE)
+@@ -92,6 +99,25 @@ def parse_history(
+ 
+     log_args = ["log", "--all", "--numstat", f"--pretty=format:{_LOG_FORMAT}"]
+ 
++    # In a shallow clone, the commits at the fetch boundary have had their
++    # parents withheld, so git reports them as parentless. `git log` then
++    # diffs each one against the empty tree and every file in the tree is
++    # counted as added. The effect is not marginal: on a six-repository
++    # public cohort, helm/helm had twelve such boundary commits adding about
++    # 113,000 lines each, roughly 1.36M of its 1.33M reported additions, and
++    # a single boundary commit in axios/axios accounted for 75,481 of its
++    # 100,283 and put one maintainer at a 91.7% "top contributor" share.
++    #
++    # A genuine root commit is indistinguishable from a boundary commit by
++    # shape alone, so the repository state decides it: in a shallow clone,
++    # a parentless commit is a truncation artifact. In a complete clone it
++    # is a real root and its lines are real.
++    #
++    # The commit is kept — it happened — and only its file statistics are
++    # marked excluded, so the lines leave every total and appear in the
++    # exclusion report under their own reason instead of vanishing silently.
++    history_truncated = _is_shallow(repo_path)
++
+     use_supplied_identities = assignment is not None
+     resolver = resolver or IdentityResolver(config.identities)
+ 
+@@ -117,8 +143,12 @@ def parse_history(
+     # merged until every author has been seen.
+     def convert(entry: _RawCommit) -> None:
+         files: list[FileChange] = []
++        at_history_boundary = history_truncated and entry.parent_count == 0
+         for added, removed, path in entry.file_stats:
+             classification = classifier.classify(path)
++            reason = classification.reason if classification.excluded else None
++            if at_history_boundary and reason is None:
++                reason = _BOUNDARY_REASON
+             change = FileChange(
+                 # Interned: a busy repository references the same few thousand paths
+                 # tens of thousands of times. Measured on one repository, 22,273
+@@ -128,7 +158,7 @@ def parse_history(
+                 added=added,
+                 removed=removed,
+                 kind=classification.kind,
+-                exclude_reason=classification.reason if classification.excluded else None,
++                exclude_reason=reason,
+             )
+             files.append(change)
+             if change.exclude_reason:
+@@ -153,6 +183,7 @@ def parse_history(
+                 author_name=sys.intern(entry.author_name),
+                 author_email=sys.intern(entry.author_email),
+                 authored_at=entry.authored_at,
++            committed_at=entry.committed_at,
+                 local_hour=entry.local_hour,
+                 local_weekday=entry.local_weekday,
+                 subject=entry.subject,
+@@ -209,6 +240,7 @@ class _RawCommit:
+     author_name: str
+     author_email: str
+     authored_at: datetime
++    committed_at: datetime
+     local_hour: int
+     local_weekday: int
+     subject: str
+@@ -218,12 +250,15 @@ class _RawCommit:
+ 
+ def _parse_record(record: str) -> _RawCommit | None:
+     fields = record.split(_FIELD_SEP)
+-    if len(fields) < 7:
++    if len(fields) < 8:
+         return None
+-    sha, parents, author_name, author_email, date_iso, subject, tail = fields[:7]
++    (
++        sha, parents, author_name, author_email,
++        date_iso, commit_date_iso, subject, tail,
++    ) = fields[:8]
+     message = tail
+     # Everything after the message field is the numstat block.
+-    remainder = fields[7] if len(fields) > 7 else ""
++    remainder = fields[8] if len(fields) > 8 else ""
+     stat_blob = remainder if remainder.strip() else _trailing_stats(tail)
+     if stat_blob is not remainder:
+         message = tail[: len(tail) - len(stat_blob)] if stat_blob else tail
+@@ -233,6 +268,23 @@ def _parse_record(record: str) -> _RawCommit | None:
+     except ValueError:
+         return None
+ 
++    # The author date says when the work was written; the commit date says
++    # when it entered this history. They diverge under rebase, cherry-pick
++    # and patch import, and the divergence is not small: one helm/helm
++    # commit carried a 2022 author date on a 2025 commit date, which set
++    # that repository's observed span to 240 weeks when the collected
++    # history covered 54. Every per-week rate in the report is that span's
++    # denominator, so all of them read about four and a half times lower
++    # than the observed history supports.
++    #
++    # Attribution keeps the author date, because the author wrote it then.
++    # The observed window uses the commit date, because that is the window
++    # this collection actually saw.
++    try:
++        committed_at = datetime.fromisoformat(commit_date_iso.strip())
++    except ValueError:
++        committed_at = authored_at
++
+     # `%aI` is strict ISO 8601 with the author's own offset, so fromisoformat keeps
+     # their local wall-clock time. That is what the working-pattern metrics need.
+     local_hour = authored_at.hour
+@@ -244,6 +296,7 @@ def _parse_record(record: str) -> _RawCommit | None:
+         author_name=author_name.strip(),
+         author_email=author_email.strip(),
+         authored_at=authored_at,
++        committed_at=committed_at,
+         local_hour=local_hour,
+         local_weekday=local_weekday,
+         subject=subject.strip(),
+@@ -321,6 +374,24 @@ def _intern_optional(value: str | None) -> str | None:
+     return sys.intern(value) if value else value
+ 
+ 
++def _is_shallow(repo_path: Path) -> bool:
++    """True when this clone's history was truncated at a fetch boundary.
++
++    Asks git rather than looking for a `shallow` file, because the file's
++    location differs between a worktree and a bare mirror and because a
++    repository can be deepened after the fact. A failure answers False: the
++    cost of missing a boundary is an inflated line count, and the cost of
++    wrongly claiming one is silently discarding a real root commit's work.
++    Of the two, over-counting is the one that shows up in the exclusion
++    report rather than disappearing from it.
++    """
++    try:
++        answer = list(stream_lines(repo_path, ["rev-parse", "--is-shallow-repository"]))
++    except GitError:
++        return False
++    return bool(answer) and answer[0].strip() == "true"
++
++
+ def _reachable_shas(repo_path: Path, branch: str, notes: list[str]) -> frozenset[str]:
+     try:
+         return frozenset(stream_lines(repo_path, ["log", branch, "--format=%H"]))
+diff --git a/receipts/definitions/ai.py b/receipts/definitions/ai.py
+index f379386..a6a46c3 100644
+--- a/receipts/definitions/ai.py
++++ b/receipts/definitions/ai.py
+@@ -15,6 +15,7 @@ metric out of context still produces a defensible sentence.
+ from __future__ import annotations
+ 
+ from .base import (
++    CAVEAT_AI_COHORT_DETECTED,
+     CAVEAT_AI_LOWER_BOUND,
+     CAVEAT_AI_NOT_RETRO,
+     CAVEAT_GENERATED,
+@@ -176,7 +177,7 @@ DEFS: tuple[Definition, ...] = (
+             "This is a correlation between two rough proxies, not a causal finding. The people using "
+             "AI tools most heavily are often also working on the least familiar code, which on its own "
+             "would produce this gap.",
+-            CAVEAT_AI_LOWER_BOUND,
++            CAVEAT_AI_COHORT_DETECTED,
+         ),
+     ),
+     Definition(
+@@ -202,7 +203,7 @@ DEFS: tuple[Definition, ...] = (
+         ),
+         formula="test ratio in AI-traced ({ai_rate}%) - in untraced ({human_rate}%) = {value} points",
+         caveats=(
+-            CAVEAT_AI_LOWER_BOUND,
++            CAVEAT_AI_COHORT_DETECTED,
+             "Confounded by the kind of work people choose AI for. Exploratory work legitimately "
+             "carries fewer tests regardless of how it was written.",
+         ),
+@@ -230,7 +231,7 @@ DEFS: tuple[Definition, ...] = (
+         ),
+         formula="median AI-traced size ({ai_size}) vs untraced ({human_size}) = {value}% difference",
+         caveats=(
+-            CAVEAT_AI_LOWER_BOUND,
++            CAVEAT_AI_COHORT_DETECTED,
+             CAVEAT_GENERATED,
+         ),
+     ),
+diff --git a/receipts/definitions/base.py b/receipts/definitions/base.py
+index c8a2986..d3f9053 100644
+--- a/receipts/definitions/base.py
++++ b/receipts/definitions/base.py
+@@ -177,6 +177,13 @@ CAVEAT_AI_LOWER_BOUND = (
+     "in commit metadata, and every one of those traces can be switched off in a single setting."
+ )
+ 
++CAVEAT_AI_COHORT_DETECTED = (
++    "The AI-assisted side of this comparison is only the work where a tool left a trace in "
++    "commit metadata, and any developer can switch that trace off. The cohort is therefore "
++    "smaller than the real one, which widens the uncertainty on this difference in both "
++    "directions."
++)
++
+ CAVEAT_AI_NOT_RETRO = (
+     "Tool-native analytics (Cursor, Copilot) only report from the day telemetry was enabled. "
+     "History before that point was never recorded and cannot be reconstructed after the fact."
+diff --git a/receipts/metrics/builder.py b/receipts/metrics/builder.py
+index 7e9cc96..bc9b273 100644
+--- a/receipts/metrics/builder.py
++++ b/receipts/metrics/builder.py
+@@ -255,9 +255,25 @@ def pr_sample(dataset: Dataset, used: int, *, unit: str = "pull requests",
+         excluded[
+             f"pull requests beyond the collection window in {truncated} repository/-ies"
+         ] = 0
++    # The evidence contract says the exclusion list accounts for the distance
++    # between the sample and its population. It did not: on the published
++    # cohort ten metrics left a remainder that was counted nowhere and
++    # explained nowhere -- 942 pull requests on `delivery.wip_open_prs`, 302
++    # on the lead times. A reader checking coverage before trusting a number
++    # got a percentage with an undeclared hole in it.
++    #
++    # Rather than trust every caller to enumerate its own ineligible records,
++    # the accounting is closed here: whatever is left over is declared. Where
++    # a caller has named its exclusions precisely this residual is zero and
++    # nothing is added, so a specific reason always beats this general one.
++    population = len(dataset.pull_requests)
++    residual = population - used - sum(excluded.values())
++    if residual > 0:
++        excluded["pull requests not eligible for this measure"] = residual
++
+     return Sample(
+         n=used,
+-        population=len(dataset.pull_requests),
++        population=population,
+         unit=unit,
+         excluded=dict(excluded),
+     )
+diff --git a/receipts/metrics/delivery.py b/receipts/metrics/delivery.py
+index 443d674..cb98bbb 100644
+--- a/receipts/metrics/delivery.py
++++ b/receipts/metrics/delivery.py
+@@ -33,6 +33,8 @@ def _lead_time(ctx: MetricContext, merged) -> list[Metric]:
+         len(pairs),
+         extra_excluded={
+             "open pull requests (not yet merged, so no lead time exists)": len(ctx.dataset.open_prs),
++            "pull requests closed without merging (never shipped, so no lead time exists)":
++                len(ctx.dataset.closed_unmerged_prs),
+         },
+     )
+ 
+diff --git a/receipts/metrics/people.py b/receipts/metrics/people.py
+index 3d9c234..157aa78 100644
+--- a/receipts/metrics/people.py
++++ b/receipts/metrics/people.py
+@@ -19,7 +19,25 @@ from .stats import safe_pct, smallest_prefix_over
+ 
+ 
+ def compute(ctx: MetricContext) -> list[Metric]:
+-    commits = list(ctx.dataset.non_merge_commits)
++    # Bot-authored commits are excluded from every metric in this family.
++    #
++    # `active_contributors` already excluded them (via `active_people()`),
++    # but the rest of the family read the unfiltered commit list, so the
++    # numerator and the denominator disagreed: a bot could not be a
++    # contributor but could be the *top* contributor. On a six-repository
++    # public cohort that is exactly what happened — "GitHub Actions Bot"
++    # held 18.8% of all lines, took rank 1 of the bus-factor evidence, and
++    # owned the file cited as the strongest knowledge-silo risk. A silo
++    # finding about a machine-generated fixture is not a finding.
++    #
++    # This filter belongs here rather than in `Dataset.filter`: a commit
++    # made by automation is still a commit, so velocity and delivery counts
++    # must keep it. It is only the people questions — who wrote this, who
++    # else could maintain it — that a bot cannot answer.
++    bot_keys = {person.key for person in ctx.dataset.people if person.is_bot}
++    commits = [
++        c for c in ctx.dataset.non_merge_commits if c.author_key not in bot_keys
++    ]
+     lines_by_person = _lines_by_person(commits)
+     return [
+         _active_contributors(ctx, commits),
+diff --git a/receipts/model.py b/receipts/model.py
+index 44984e4..0b76f0a 100644
+--- a/receipts/model.py
++++ b/receipts/model.py
+@@ -67,6 +67,11 @@ class Commit:
+     author_name: str
+     author_email: str
+     authored_at: datetime
++    #: When this commit entered this history. Equal to `authored_at` for
++    #: ordinary work; later for anything rebased, cherry-picked or imported.
++    #: The observed-window calculation uses this, so a single old author date
++    #: on a recently landed patch cannot stretch a scope's span.
++    committed_at: datetime
+     local_hour: int
+     local_weekday: int
+     subject: str
+@@ -115,11 +120,22 @@ class Commit:
+ 
+     @property
+     def month(self) -> str:
+-        return self.authored_at.strftime("%Y-%m")
++        return self.committed_at.strftime("%Y-%m")
+ 
+     @property
+     def day(self) -> str:
+-        return self.authored_at.strftime("%Y-%m-%d")
++        # Calendar buckets answer a window question — which days and months
++        # did this history see work arrive — so they share the clock that
++        # `Dataset.date_range` uses. Mixing the two clocks is not a
++        # theoretical worry: with the span measured on commit dates and the
++        # active-day set measured on author dates, a rebased commit
++        # contributed a day outside the window and `active_days_per_week`
++        # came out at 7.2, which is more days than a week contains.
++        #
++        # Attribution keeps the author date, and so do the working-pattern
++        # metrics: `local_hour` and `local_weekday` are about when a person
++        # was at the keyboard, which the author date is the only record of.
++        return self.committed_at.strftime("%Y-%m-%d")
+ 
+     def url(self, repo_url: str | None) -> str | None:
+         return f"{repo_url}/commit/{self.sha}" if repo_url else None
+@@ -411,6 +427,19 @@ class Dataset:
+     def open_prs(self) -> tuple[PullRequest, ...]:
+         return tuple(p for p in self.pull_requests if p.is_open)
+ 
++    @property
++    def closed_unmerged_prs(self) -> tuple[PullRequest, ...]:
++        """Closed without merging: the third pull-request state.
++
++        It had no name here, which is why it had no exclusion line either. A
++        merge-based measure counts the merged and declares the open as
++        excluded, and these fell between the two -- 302 of 1,200 on the
++        published cohort, counted nowhere and explained nowhere.
++        """
++        return tuple(
++            p for p in self.pull_requests if not p.is_merged and not p.is_open
++        )
++
+     @property
+     def reviews(self) -> tuple[Review, ...]:
+         return tuple(r for pr in self.pull_requests for r in pr.reviews)
+@@ -441,10 +470,17 @@ class Dataset:
+         return tuple(p for p in self.people if p.key in keys and not p.is_bot)
+ 
+     def date_range(self) -> tuple[datetime | None, datetime | None]:
++        """The window this collection observed, by commit date.
++
++        Author dates would be the intuitive choice and are the wrong one: a
++        rebased or imported patch carries an author date from long before it
++        reached this history, and a single such commit stretches the window
++        that every per-week rate divides by.
++        """
+         commits = self.non_merge_commits
+         if not commits:
+             return (None, None)
+-        stamps = [c.authored_at for c in commits]
++        stamps = [c.committed_at for c in commits]
+         return (min(stamps), max(stamps))
+ 
+     def span_weeks(self, minimum: float = 1.0) -> float:
+diff --git a/receipts/report.py b/receipts/report.py
+index 2962e37..0427352 100644
+--- a/receipts/report.py
++++ b/receipts/report.py
+@@ -18,6 +18,8 @@ provide on its own:
+ 
+ from __future__ import annotations
+ 
++import hashlib
++
+ from dataclasses import dataclass, field
+ from typing import Any
+ 
+@@ -65,6 +67,16 @@ class Headline:
+     metric_id: str
+     scope_key: str
+     value_display: str
++    #: The rule that fired, as data. A finding is a declared threshold being
++    #: crossed, and a reader who cannot see the threshold cannot argue with
++    #: the finding -- which is the whole point of publishing thresholds as
++    #: data rather than prose. These three fields exist because the renderer
++    #: had no honest way to print "fired by review_coverage < 50" and
++    #: correctly refused to invent it: `_RULES` already held the comparison
++    #: and the threshold, and `Headline` simply dropped them on the floor.
++    rule_comparison: str = ""
++    rule_threshold: float | None = None
++    ruleset_version: str = ""
+ 
+     def to_dict(self) -> dict[str, Any]:
+         return {
+@@ -75,6 +87,9 @@ class Headline:
+             "metric_id": self.metric_id,
+             "scope_key": self.scope_key,
+             "value_display": self.value_display,
++            "rule_comparison": self.rule_comparison,
++            "rule_threshold": self.rule_threshold,
++            "ruleset_version": self.ruleset_version,
+         }
+ 
+ 
+@@ -452,6 +467,23 @@ _RULES: tuple[tuple[str, str, float, str, str, str], ...] = (
+ )
+ 
+ 
++def ruleset_version() -> str:
++    """A short digest of the rule table itself.
++
++    Derived rather than hand-maintained so it cannot drift: edit a threshold
++    and the version changes in the same commit, which is what lets a reader
++    compare two snapshots and know whether a finding moved because the work
++    changed or because the rule did. Only the machine-checkable parts of a
++    rule are hashed -- the title and the suggested action are prose, and
++    rewording them does not change what fired.
++    """
++    material = ";".join(
++        f"{metric_id}{comparison}{threshold:g}:{severity}"
++        for metric_id, comparison, threshold, severity, _title, _action in _RULES
++    )
++    return "r" + hashlib.sha256(material.encode()).hexdigest()[:8]
++
++
+ def derive_headlines(scopes: dict[str, ScopeReport], dataset: Dataset) -> list[Headline]:
+     """Select findings by rule, so the same data always yields the same headlines.
+ 
+@@ -491,6 +523,9 @@ def derive_headlines(scopes: dict[str, ScopeReport], dataset: Dataset) -> list[H
+                     metric_id=metric_id,
+                     scope_key=key,
+                     value_display=metric.display or str(metric.value),
++                    rule_comparison=comparison,
++                    rule_threshold=threshold,
++                    ruleset_version=ruleset_version(),
+                 )
+             )
+ 
+diff --git a/tests/factories.py b/tests/factories.py
+index 8d09f26..0f6c903 100644
+--- a/tests/factories.py
++++ b/tests/factories.py
+@@ -47,6 +47,7 @@ def make_commit(
+         author_name=name,
+         author_email=f"{author}@corp.example",
+         authored_at=when,
++        committed_at=when,
+         local_hour=hour,
+         local_weekday=when.weekday(),
+         subject=subject,
+diff --git a/tests/test_glossary.py b/tests/test_glossary.py
+index 45bd092..4789f8c 100644
+--- a/tests/test_glossary.py
++++ b/tests/test_glossary.py
+@@ -84,6 +84,25 @@ MEASURED_AI_METRICS = {
+     "ai.floor_understatement",
+ }
+ 
++#: Inferred AI metrics that are a signed difference between two cohorts rather
++#: than a share of a population. They are not floors and must not say they are.
++#:
++#: "Floor" means "at least this much of X", which is a coherent claim about a
++#: share and an incoherent one about a difference: rendering a −13.5% delta as
++#: "≥ −13.5%" asserts nothing a reader can act on, and a renderer that trusts
++#: the caveat wording had already started printing exactly that. What these
++#: metrics must state instead is that the AI-assisted cohort is detected from
++#: traces only, so it is smaller than the real one and the uncertainty runs in
++#: both directions.
++AI_DELTA_METRICS = {
++    "ai.rework_delta",
++    "ai.test_ratio_delta",
++    "ai.commit_size_delta",
++}
++
++FLOOR_MARKERS = ("floor", "lower bound", "at least", "higher than")
++COHORT_MARKERS = ("cohort", "switch that trace off", "uncertainty")
++
+ 
+ @pytest.mark.parametrize("definition", ALL_DEFINITIONS, ids=lambda d: d.id)
+ def test_ai_metrics_are_never_presented_as_measurements(definition):
+@@ -98,8 +117,18 @@ def test_ai_metrics_are_never_presented_as_measurements(definition):
+     blob = " ".join(
+         [definition.label, definition.plain_english, definition.how_to_read, *definition.caveats]
+     ).lower()
++    if definition.id in AI_DELTA_METRICS:
++        assert any(marker in blob for marker in COHORT_MARKERS), (
++            f"{definition.id} is a difference between two cohorts, so it must state that "
++            f"the AI-assisted cohort is trace-detected and therefore incomplete"
++        )
++        assert not any(marker in blob for marker in ("floor", "lower bound")), (
++            f"{definition.id} is a signed difference, not a share, so it must not be "
++            f"described as a floor -- a renderer will print it as '>= -13.5%'"
++        )
++        return
+     assert any(
+-        marker in blob for marker in ("floor", "lower bound", "at least", "higher than")
++        marker in blob for marker in FLOOR_MARKERS
+     ), f"{definition.id} must state that it is a floor rather than a measurement"
+ 
+ 
+diff --git a/tests/test_metrics.py b/tests/test_metrics.py
+index 3a4f6c4..a1c11bd 100644
+--- a/tests/test_metrics.py
++++ b/tests/test_metrics.py
+@@ -91,7 +91,7 @@ def test_exemplars_explain_why_they_are_evidence(computed):
+ 
+ def test_ai_metrics_never_claim_to_be_measurements(computed):
+     """Inferred AI metrics must carry the floor wording; imported ones are exempt."""
+-    from test_glossary import MEASURED_AI_METRICS
++    from test_glossary import AI_DELTA_METRICS, MEASURED_AI_METRICS
+ 
+     metrics, _ = computed
+     for metric in metrics:
+@@ -99,6 +99,12 @@ def test_ai_metrics_never_claim_to_be_measurements(computed):
+             continue
+         assert metric.tier == "inferred"
+         blob = " ".join([metric.label, *metric.caveats]).lower()
++        if metric.id in AI_DELTA_METRICS:
++            # A difference between two cohorts is not a floor; it must say what
++            # is actually uncertain about it, and must not invite a ">=" prefix.
++            assert "cohort" in blob
++            assert "floor" not in blob and "lower bound" not in blob
++            continue
+         assert "floor" in blob or "lower bound" in blob
+ 
+ 
+@@ -355,3 +361,27 @@ def test_direct_push_share_counts_untraceable_landings():
+     )
+     metrics, _ = compute_all(ds, Scope(level="repo", key="r", label="r"), Config())
+     assert metrics.require("process.direct_push_share").value == 50.0
++
++
++def test_pull_request_samples_account_for_their_whole_population(computed):
++    """The exclusion list must close the gap between sample and population.
++
++    This is the evidence contract, not a nicety: a reader checks coverage
++    before trusting a figure, and a percentage with an undeclared hole in it
++    is worse than no percentage. Ten metrics on the published cohort left a
++    remainder that was counted nowhere and explained nowhere -- 942 pull
++    requests on `delivery.wip_open_prs`, 302 on the lead times, which turned
++    out to be the pull requests closed without ever merging.
++    """
++    metrics, _ = computed
++    for metric in metrics:
++        sample = metric.sample
++        if not sample.population or sample.unit != "pull requests":
++            continue
++        declared = sum(sample.excluded.values())
++        assert sample.n + declared == sample.population, (
++            f"{metric.id}: {sample.n} counted + {declared} excluded != "
++            f"{sample.population} in population; "
++            f"{sample.population - sample.n - declared} record(s) are "
++            f"accounted for nowhere"
++        )

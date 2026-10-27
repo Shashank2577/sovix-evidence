@@ -10,9 +10,9 @@ and costs never use JavaScript float arithmetic for aggregation. Every private r
 scope columns. Mutable aggregates have `version`, `created_at`, `updated_at`; immutable
 records have `recorded_at`, `schema_version`, `digest` and optional `supersedes_id`.
 
-No contributor name, email, raw prompt, code body, tool arguments/output or local filesystem
-path belongs in the normalized platform database. A source adapter may transiently parse
-identity for aggregate counts inside the local trusted process; exports exclude it.
+No contributor name or email belongs in the normalized platform database; prompts, responses, code,
+tool I/O, file paths and raw error text belong only in the expiring session-content store (ADR-016).
+Adapters may transiently parse identity for aggregate counts in the trusted process; exports exclude it.
 
 ## Entity Catalog
 
@@ -31,7 +31,7 @@ identity for aggregate counts inside the local trusted process; exports exclude 
 | SourceRevision | connector_id, external_id, revision_key, kind, occurred_at, observed_at, source_url, sanitized_payload, digest | Unique workspace+connector+external_id+revision; edits append; URLs canonicalized |
 | Job | type, resource_id, state, attempt, max_attempts, next_attempt_at, lease_until, fence, progress, error_code | Owner scope required; at most one active fenced lease; progress is safe counts |
 | OutboxEvent | aggregate_id, aggregate_version, event_type, envelope, published_at | Unique aggregate+version+event_type; delivery at least once |
-| Session | collector_id, external_session_id, runtime, repository_id nullable, started_at, ended_at nullable, state, coverage | Unique workspace+collector+external_session_id; duration is elapsed only |
+| Session | collector_id, external_session_id, runtime, repository_id nullable, started_at, ended_at nullable, state, coverage, contributor_id nullable, content_state, content_missing_reason nullable, content_expired_at nullable | Unique workspace+collector+external_session_id; duration is elapsed only; content_state present/partial/missing/expired; content lives in spec 005's `SpanContent` (its `span_id` is `Span.id`, not the wire ID), secret-redacted, hard-deleted ≤30 days after `ended_at` or, if never finalized, the last received span; never a metric input |
 | Span | collector_id, trace_id, span_id, parent_span_id nullable, session_id, kind, start_time, end_time, safe_attributes | Trace/span hex lengths 32/16; unique collector+trace+span; conflicting sanitized payload rejected |
 | UsageUnit | session_id, owner_span_id, model_id, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens nullable, accounting_status | Unique owner span; status canonical/included_in_parent/unknown; noncanonical units excluded from totals |
 | PriceVersion | catalog, version, model_id, currency, effective_from, rates, unit_size, digest | Immutable; unknown model unpriced; USD only; cache semantics versioned |
@@ -47,8 +47,8 @@ identity for aggregate counts inside the local trusted process; exports exclude 
 | ScheduleRun | schedule_id, slot_local_date, intended_timezone, effective_utc, job_id | Unique schedule+slot_local_date; DST overlap once, gap shift forward |
 | Export | snapshot_id, format, state, manifest_digest, artifact_id, expires_at, revoked_at | format html/json/csv_bundle/markdown; authorized download gateway, no public URLs |
 | Investigation | snapshot_id, finding_id, title, owner_user_id nullable, status, due_at nullable, resolution, version | Only authorized members can be assigned; comments append with sanitized text |
-| AuditEvent | actor_id, action, resource_kind, resource_id, result, reason_code, occurred_at | Content-free, append only; 365-day default retention |
-| RetentionPolicy | spans_days, evidence_days, exports_days, audit_days, version | Defaults 30/365/30/365; bounds defined in security.md |
+| AuditEvent | actor_id, action, resource_kind, resource_id, returned_ids, result, reason_code, occurred_at | Content-free, append only; 365-day default retention; resource_id is the requested resource, returned_ids the 0..n session or finding IDs a read returned; session-content read events are owner/admin-only and never shown to the subject |
+| RetentionPolicy | spans_days, session_content_days, evidence_days, exports_days, audit_days, version | Defaults 60/30/365/30/365; span and content clocks start at session end; session_content_days 1–30, shortening applies to stored content (ADR-016); spans_days > session_content_days, else rejected at write; bounds defined in security.md |
 | DeletionRequest | project_id, requested_by, state, cutoff_revision, fence, requested_at, completed_at, safe_counts | Project deletion only in v1; cannot reverse after fencing; tombstone contains no content |
 | Deployment | source_revision_id, repository_id, revision_sha, environment, status, started_at, completed_at nullable, service_key | Immutable revisioned source; successful production attempts define deployment denominator |
 | Incident | source_revision_id, service_key, severity, impact_started_at nullable, detected_at, recovered_at nullable, state | Distinct clocks; incident-deployment associations use EvidenceLink |
@@ -106,7 +106,7 @@ A snapshot lists every pinned revision and cannot silently advance to current so
 
 Deletion is a lifecycle exception to retained content, not a rewrite of historical facts.
 Project deletion sets a durable fence; rejects future writes; cancels jobs; removes source,
-span, cost, metric, search and object payloads; revokes exports; marks affected multi-project
+span, session-content, cost, metric, search and object payloads; revokes exports; marks affected multi-project
 snapshots revoked; and retains content-free deletion/audit tombstones. Unaffected projects'
 underlying records remain. A new workspace/project cannot reuse deleted IDs. Previously
 downloaded files cannot be remotely erased and the user-facing deletion flow says so.

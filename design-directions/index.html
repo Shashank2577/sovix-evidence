@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sovix — five visual directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;550;650&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Deliberately neutral chrome so the chooser doesn't campaign for any direction. */
+:root{
+  --bg:#FAFAF9;--ink:#1A1A18;--muted:#6B6B66;--faint:#98988F;
+  --line:#E3E3DD;--card:#FFFFFF;
+  --sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;padding:56px 24px 96px;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+h1{font-size:34px;font-weight:650;letter-spacing:-.02em;margin:8px 0 10px}
+.lede{color:var(--muted);max-width:72ch}
+.lede b{color:var(--ink);font-weight:550}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:40px}
+.card{
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:0;overflow:hidden;display:flex;flex-direction:column;
+  text-decoration:none;
+  transition:transform .18s cubic-bezier(.3,1.2,.5,1),box-shadow .18s ease;
+}
+.card:hover{transform:translateY(-3px);box-shadow:0 12px 32px -14px rgba(26,26,24,.25)}
+.card:focus-visible{outline:2px solid #4747C2;outline-offset:3px}
+.swatch{height:96px;display:flex;align-items:center;padding:0 22px;gap:10px;border-bottom:1px solid var(--line)}
+.swatch .big{font-size:30px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.swatch .meta{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.cbody{padding:18px 22px 20px;display:flex;flex-direction:column;gap:8px;flex:1}
+.cno{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;color:var(--faint)}
+.cname{font-size:19px;font-weight:650;letter-spacing:-.01em}
+.cclaim{font-size:13.5px;color:var(--muted);flex:1}
+.cfacts{font-family:var(--mono);font-size:10.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:10px;line-height:1.8}
+.note{
+  margin-top:44px;border:1px solid var(--line);border-radius:12px;background:var(--card);
+  padding:22px 26px;color:var(--muted);font-size:14px;max-width:none;
+}
+.note h2{font-size:15px;font-weight:650;color:var(--ink);margin-bottom:6px}
+.note b{color:var(--ink);font-weight:550}
+.foot{margin-top:36px;font-family:var(--mono);font-size:11px;color:var(--faint)}
+.foot a{color:var(--muted)}
+@media(prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker">Sovix · visual-language exercise · 2026-09-13</p>
+  <h1>Five answers to “what kind of product is this?”</h1>
+  <p class="lede">Each page renders the <b>same screen</b> — the fastapi/fastapi
+  repository view, real data from the 2026-09-13 snapshot: the 7.8% review-coverage
+  finding with its full working, the cross-repository dot strip, and the lead-time
+  dumbbell. The only variable is the design. Motion is on everywhere; charts never
+  animate values from zero, nothing exists only on hover, and every page respects
+  reduced-motion. Findings and method in <a href="RESEARCH.md">RESEARCH.md</a>.</p>
+
+  <div class="grid">
+    <a class="card" href="01-instrument.html">
+      <div class="swatch" style="background:#0B0D10;color:#E8EDF2">
+        <span class="big" style="font-family:'JetBrains Mono',monospace;color:#FF6B6B">7.8%</span>
+        <span class="meta" style="color:#94A1AE">Geist + Geist Mono · dark · #5AB8FF</span>
+      </div>
+      <div class="cbody">
+        <p class="cno">DIRECTION 01</p>
+        <p class="cname">Instrument</p>
+        <p class="cclaim">A precision console that lives in the dock next to Grafana and
+        Sentry. Dark-first for long sessions; the ground recedes and the numerals carry
+        the light. Left rail, dense rows, fast restrained motion (120–180&nbsp;ms), linked
+        tracing across charts, a sort toggle. Says: <i>this is an engineer's daily tool.</i></p>
+        <p class="cfacts">dark · dense · neutral-precise · layered panels · restrained motion</p>
+      </div>
+    </a>
+
+    <a class="card" href="02-ledger.html">
+      <div class="swatch" style="background:#FBF9F4;color:#1B1813">
+        <span class="big" style="font-family:Georgia,serif;color:#A61E24">7.8%</span>
+        <span class="meta" style="color:#6E675B">Newsreader + Inter + Plex Mono · light · #A61E24</span>
+      </div>
+      <div class="cbody">
+        <p class="cno">DIRECTION 02</p>
+        <p class="cname">Ledger</p>
+        <p class="cclaim">The audit document elevated to software. Serif voice, an
+        “Exhibit A” with a seal, figures captioned Fig.&nbsp;1 and Fig.&nbsp;2, footnote
+        apparatus in mono, calm paper-mannered motion (260&nbsp;ms), a “quote this”
+        affordance. Says: <i>this is evidence you take to a board.</i></p>
+        <p class="cfacts">light · generous editorial · opinionated voice · flat · calm motion</p>
+      </div>
+    </a>
+
+    <a class="card" href="03-console.html">
+      <div class="swatch" style="background:#F7F7F8;color:#18181C;border-bottom:1px solid #E4E4E8">
+        <span class="big" style="font-family:'JetBrains Mono',monospace;color:#D13438">7.8%</span>
+        <span class="meta" style="color:#6E6E78">Inter + JetBrains Mono · dual theme · #5B5BD6</span>
+      </div>
+      <div class="cbody">
+        <p class="cno">DIRECTION 03</p>
+        <p class="cname">Console</p>
+        <p class="cclaim">The Linear school done properly: layered neutral surfaces, one
+        tuned indigo accent, tabs, ⌘K search, a working three-state theme toggle
+        (system/light/dark), springy-but-brief card motion. Says: <i>this is modern B2B
+        software your whole org can live in.</i></p>
+        <p class="cfacts">dual-neutral · balanced density · neutral-precise · layered · springy motion</p>
+      </div>
+    </a>
+
+    <a class="card" href="04-signal.html">
+      <div class="swatch" style="background:#0B0B0E;color:#F2F2F4">
+        <span class="big" style="font-family:'JetBrains Mono',monospace;color:#FF5964">7.8%</span>
+        <span class="meta" style="color:#9698A6">Space Grotesk + Space Mono · dark · #D8F34E</span>
+      </div>
+      <div class="cbody">
+        <p class="cno">DIRECTION 04</p>
+        <p class="cname">Signal</p>
+        <p class="cclaim">Branded and opinionated — PostHog/Raycast energy. Engineered 1px
+        borders, hard offset shadows, a loud chartreuse doing only interaction work,
+        display-size numerals, diamond marks, expressive spring motion. The hue never
+        grades the data. Says: <i>this product has a voice and a point of view.</i></p>
+        <p class="cfacts">dark · bold display scale · branded-opinionated · flat+offset · expressive motion</p>
+      </div>
+    </a>
+
+    <a class="card" href="05-blueprint.html">
+      <div class="swatch" style="background:#F5F7F9;color:#16222E;border-bottom:1px solid #DDE3EA">
+        <span class="big" style="font-family:'JetBrains Mono',monospace;color:#B42834">7.8%</span>
+        <span class="meta" style="color:#5F7183">IBM Plex Sans + Plex Mono · light · #1D5FBF</span>
+      </div>
+      <div class="cbody">
+        <p class="cno">DIRECTION 05</p>
+        <p class="cname">Blueprint</p>
+        <p class="cclaim">A technical drawing of the engineering organisation: title
+        block, measurement grid, indexed callouts ①–⑤, hatched exclusions like section
+        cuts, figures numbered C-1 and C-2, precise mechanical motion with no bounce.
+        Says: <i>the product literally shows its working — so the interface is drawn like
+        one.</i></p>
+        <p class="cfacts">light · dense-precise · neutral with drafting voice · flat · mechanical motion</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="note">
+    <h2>The recommendation</h2>
+    <p><b>Ship 03 Console as the product shell, and pull two organs from the others:</b>
+    the Ledger's serif-voiced finding treatment for the published artifact and board-pack
+    surfaces, and the Blueprint's hatched sample bars as the signature mark everywhere.
+    Console is the only direction that credibly sits beside Linear, Vercel and Sentry for
+    a <i>whole org</i> — engineers get the dark theme, a CTO gets the light one, and the
+    layered-neutral system will not date the way 04's chroma or a full drafting metaphor
+    would. 01 is the strongest pure-engineer answer if the ICP narrows to platform teams.</p>
+  </div>
+
+  <p class="foot">All values from cohort.json, snapshot 2026-09-13 07:06 UTC · research
+  with sources in <a href="RESEARCH.md">RESEARCH.md</a> · every page standalone, 360px-safe,
+  keyboard-operable, AA contrast.</p>
+</div>
+</body>
+</html>

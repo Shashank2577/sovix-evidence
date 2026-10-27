@@ -134,16 +134,27 @@ schema rollback requires a tested forward repair migration.
 Take one encrypted database backup and object inventory daily, retain seven rolling days and
 record digest, completion and restore-test status. Quarterly, restore into an isolated account,
 deny all user access, validate schema and object digests, load every live deletion tombstone
-from the independently retained tombstone ledger, reapply purges/revocations, then run tenant
+from the independently retained tombstone ledger, reapply purges/revocations, purge session
+content past its expiry (already unreadable because its key is destroyed), then run tenant
 isolation and deletion probes. Only after those pass may the restored environment become
 eligible for service. A drill is successful when measured data loss is within 24 hours, user
 access resumes within four hours, and no governed deleted payload is reachable.
 
 ## Retention and Deletion
 
-Defaults and configurable ranges are: normalized spans 30 days (7–90), source evidence and
-snapshots 365 days (30–730), exports 30 days (1–90), audits 365 days (90–730), and safe job
-errors 30 days (7–90). Purge jobs run hourly in batches of 1,000 records or 100 objects and
+Defaults and configurable ranges are: normalized spans 60 days (7–90), session content 30 days
+(1–30, hard delete, never longer; ADR-016), source evidence and snapshots 365 days (30–730),
+exports 30 days (1–90), audits 365 days (90–730), and safe job errors 30 days (7–90). Span and
+content clocks both start at session end, or at the last received span of a session that never
+finalizes. Span metadata must outlive content: a retention write whose spans_days is not greater
+than session_content_days is rejected, never cascaded. Shortening the content period applies to
+content already stored. Session content is encrypted under keys scoped per workspace and
+session-end day; a still-open session writes under a provisional key and is re-wrapped to its
+end-day key when it ends or at its last received span. Keys are held in the secret manager/KMS (OS keychain in local mode),
+outside every database backup, so a restore brings back ciphertext but never keys. Destroying a
+day's key at expiry, or early when retention is shortened, makes every copy of that content
+unreadable, backups included (crypto-shredding). Coaching model text and citation quotes (spec 006
+FR-478) are encrypted under the key of their earliest-expiring cited session. Purge jobs run hourly in batches of 1,000 records or 100 objects and
 publish safe counts. Expired evidence makes dependent drill-down unavailable; retained
 summary values disclose that their evidence expired.
 
@@ -168,4 +179,5 @@ cannot be erased remotely and the confirmation flow states that limit.
   completeness becomes partial where evidence is missing.
 - Meet p95 response/ingestion targets at benchmark scale and validate alerts by fault injection.
 - Complete backup restore inside RPO/RTO and prove deletion tombstones are applied before access.
-- Search telemetry and restored artifacts for seeded content; no prohibited payload is present.
+- Search telemetry and restored artifacts for seeded content; no prohibited payload, and no
+  session content past its expiry, is present.

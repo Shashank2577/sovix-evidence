@@ -42,10 +42,11 @@ part of baseline scanning.
 **Alternative**: Claiming universal Codex support from a marketplace listing is insufficient.
 **Source**: [Codex integration](https://github.com/dash0hq/dash0-agent-plugin/blob/main/.codex-plugin/README.md).
 
-## R5 — Metadata-only and canonical usage accounting
+## R5 — Attribute allowlist and canonical usage accounting
 
-**Decision**: Allowlist metadata; discard identity/content/error text. Model missing fields as
-unsupported. For Codex, parent turn owns reported subagent usage; do not add child totals again.
+**Decision**: Allowlist metadata; discard identity attributes. Content and raw error text are kept
+only as expiring session content (ADR-016 superseded the original metadata-only decision). Model
+missing fields as unsupported. For Codex, parent turn owns reported subagent usage; do not add child totals again.
 Use token-priced equivalent cost rather than calling it subscription spending.
 **Rationale**: Runtime fields and accounting differ. Current matrix lacks Codex cache-creation
 and emitted reasoning-token/effort fields. Fail-open hooks can lose telemetry.

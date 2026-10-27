@@ -83,10 +83,10 @@ session. Project configuration replaces user configuration rather than merging. 
 credentials reside in owner-only local configuration, not a shell `DASH0_AUTH_TOKEN` fallback.
 Pin and checksum-verify a release; never silently update the collector during an analysis.
 
-Default `omit_io=true` strips prompt/tool content, but `omit_user_info=false` sends real
-identity. Sovix's recommended collector configuration explicitly enables both omissions.
-Ingestion must still enforce its own allowlist. Do not assume upstream defaults satisfy
-Sovix privacy. Debug mode can serialize payloads; it is disabled in production.
+Default `omit_io=true` strips prompt/tool content; `omit_user_info=false` sends `user.email`. Sovix
+recommends `omit_io=false` (content captured, ADR-016) and `omit_user_info=false`: ingestion HMACs
+`user.email` into `identity_digest` at the boundary (spec 002) and never stores it in plaintext, and
+without it no session ties to a developer. Debug mode can serialize payloads; it is off in production.
 
 The [feature matrix](https://github.com/dash0hq/dash0-agent-plugin/blob/main/FEATURE_MATRIX.md)
 reports no emitted Codex reasoning-token, reasoning-effort or cache-creation fields.
@@ -98,15 +98,15 @@ coverage independently of Git collection coverage.
 
 ## Exact Metadata Allowlist
 
-This is the full v1 Dash0 input allowlist. Values also pass type, length, format and source
-scope validation. Unknown keys are dropped before persistence, quarantine and logs. OTLP
-resource and scope metadata are not unrestricted passthrough dictionaries.
+This is the full v1 Dash0 metadata allowlist; session content is routed as stated below it. Values
+also pass type, length, format and source scope validation. Unknown keys are dropped before
+persistence, quarantine and logs. OTLP resource and scope metadata are not passthrough dictionaries.
 
 | Accepted input | Normalized meaning / validation |
 |---|---|
 | `traceId`, `spanId`, `parentSpanId` | Lowercase hex 32/16/16; nonzero IDs; absent parent allowed |
 | `startTimeUnixNano`, `endTimeUnixNano` | Integer timestamp strings; invalid negative duration rejected |
-| `status.code` | Unset/OK/Error normalized to status enum; discard status message |
+| `status.code` | Unset/OK/Error normalized to status enum; `status.message` is session content only |
 | scope `name`, `version`; resource `service.name`, `service.version` | Registered runtime/plugin identifiers, max 128 characters; never authority |
 | `gen_ai.conversation.id` | Opaque external session ID, max 256 characters |
 | `gen_ai.harness.name`, `gen_ai.agent.name`, `gen_ai.agent.id` | Declared runtime/agent IDs; max 128/128/256 characters |
@@ -130,12 +130,12 @@ aliases only with fixtures proving equivalent semantics. Reject unknown attribut
 containing control characters; never echo rejected values. Repository/ref names can still
 be sensitive metadata and remain private project evidence.
 
-Drop raw span display names, `user.*`, `dash0.team.name`, CWD/paths, error/exception text,
-messages, arguments/results, arbitrary span events/links, skill/file paths, rate-limit and
-credit snapshots, and unrecognized fields. Reconstruct display names from validated
-operation/model/tool fields. Convert error status to `tool_error` or `unknown_error`; never
-classify by retaining arbitrary exception content. Registered connector/project assignment
-supplies team scope. Redaction counters contain field categories and counts only.
+Session content (ADR-016): messages, system instructions, tool arguments/results (file paths appear only
+there; no file-path attribute exists), session title, `status.message` and `exception.message`. Redact
+credential-shaped strings and store it only in the expiring content store. Digest `user.email` (spec 002),
+then drop `user.*`, raw span display names, `dash0.team.name`, CWD, span events/links, rate-limit and credit
+snapshots and unrecognized fields. Display names come from operation/model/tool fields; error classes from
+`status.code` and metadata, never error text. Connector/project assignment supplies team scope; redaction counters hold categories/counts.
 
 Session identity is scoped by collector; span identity is collector+trace+span within the
 workspace. Identical sanitized replay is a no-op. Conflicting duplicates are quarantined as
@@ -221,10 +221,11 @@ success. GitHub deployment collection uses its
 - Duplicate, conflicting and out-of-order deliveries preserve counts and immutable revisions.
 - Crash after receipt commit replays once; signature mutation/Unicode mismatch fails validation.
 - Revocation removes live collection/action ability without turning historical coverage complete.
-- Seeded secrets in every dropped field are absent from DB, logs, DLQ, artifacts and safe errors.
+- Seeded secrets in every dropped or content field are absent from DB, logs, DLQ, artifacts and safe errors.
 - Default Codex fixtures mark unsupported counters unavailable; parent/child cost remains conserved.
 - OTLP full/partial/error responses follow their protocol independently of REST job responses.
 - An unresolved deployment SHA cannot contribute verified deployed-PR counts.
 - A time-near incident remains a candidate and cannot increase verified change-failure rate.
 - A success followed by inactive deployment status retains the successful attempt history.
 - Instrumentation or pagination gaps appear in UI/export denominators and completeness metadata.
+- Seeded session content appears only in the content store, and is absent there after expiry and after restore.

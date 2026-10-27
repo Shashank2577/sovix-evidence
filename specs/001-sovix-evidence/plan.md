@@ -23,14 +23,14 @@ and policy enforcement are separately gated capabilities.
 | Hosted storage | PostgreSQL 17 with tenant RLS; S3-compatible object store for encrypted artifacts |
 | Local storage | SQLite, local blob directory, same domain services; no hosted login |
 | Async work | PostgreSQL leased jobs and transactional outbox; same-process worker for local mode |
-| Telemetry | OTLP/HTTP receiver or OTel Collector; versioned Dash0 normalizer, metadata allowlist |
+| Telemetry | OTLP/HTTP receiver or OTel Collector; versioned Dash0 normalizer, attribute allowlist, secret-redacted session content kept ≤30 days (ADR-016) |
 | Identity | Hosted OIDC authorization code + PKCE through web BFF; API validates audience-bound JWT |
 | Tests | pytest + Hypothesis, JSON Schema/OpenAPI validation, Vitest, Playwright, axe |
 | Packaging | pnpm workspace for JS; uv workspace/lock for Python; OCI images for API/worker/web |
 | Deployment | Docker Compose for pilot/self-host; managed equivalent is supported through same images |
 | Scale | Initial target: 50 repos, 100k source revisions, 1m spans/workspace/day |
 | Performance | Overview p95 2s, evidence p95 1s, accepted spans queryable p95 60s |
-| Constraints | No model calls in calculations; offline HTML; metadata-only telemetry; no public private-data sync |
+| Constraints | No model calls in calculations; offline HTML; session content never enters metrics, snapshots, exports, events or logs (ADR-016); no public private-data sync |
 
 These are implementation targets, not claims that dependencies or application services are
 already installed. Use current compatible security patch releases and commit lockfiles
@@ -42,7 +42,7 @@ before implementation; changes to a major version require an ADR and contract re
 |---|---|---|
 | I Evidence | Metric schema plus canonical manifests and source revisions | Covered by contracts, metrics and acceptance documents |
 | II Limits | Separate evidence kind/availability; candidate joins excluded | Covered by domain invariants and golden scenarios |
-| III Privacy | Metadata allowlist, aggregate views, isolated public store | Covered by security and UI specifications |
+| III Privacy | Attribute allowlist, secret-redacted 30-day session content with audited role-scoped reads, aggregate views, isolated public store | Covered by security and UI specifications |
 | IV Contracts | OpenAPI, JSON Schemas, event/CLI contracts and fixtures | Must pass repository validation before delivery |
 | V Actions | Shadow first; exact-head revalidation; bounded action types | Covered by policy specification |
 | VI Tests | Risk-bearing invariants and story end-to-end acceptance | Task backlog requires these before each milestone |
@@ -97,6 +97,7 @@ flowchart TD
   G[Local Git / GitHub] --> A[Read-only adapters]
   L[Sovix / Receipts reports] --> A
   T[Redacted agent spans] --> R[OTLP receiver / allowlist]
+  R --> K[Session-content store, 30-day expiry]
   D[Deployment / incident events] --> A
   A --> J[Durable receipt + leased job]
   R --> J
@@ -122,7 +123,8 @@ supplied labels and repository content never become authorization or executable 
    snapshots, implement reproducible metrics, evidence UI and offline exports. Do not infer
    raw records from summary metrics. This is the first demonstrable local product.
 3. **M2 — Workspace and telemetry**: Implement hosted access, explicit GitHub installations,
-   collector registration, OTLP normalization, verified/candidate links and cost allocation.
+   collector registration, OTLP normalization, expiring session-content capture, verified/candidate
+   links and cost allocation.
 4. **M3 — Reporting operations**: Saved definitions, schedule slots, inbox, investigations,
    entitlements, source-health views, retention/deletion and verified restore.
 5. **M4 — Outcomes and control**: Explicit release/incident adapters, mature comparisons,
@@ -153,7 +155,8 @@ supplied labels and repository content never become authorization or executable 
 | Telemetry parent/subagent double-count | Canonical usage owner and `included_in_parent` accounting status |
 | False session/PR association | Separate candidate edges, verified source membership and analyst attestation |
 | Incomplete collection looks complete | Distinct eligibility, collection and instrumentation coverage fields |
-| Sensitive content in error strings | Ingest allowlist; discard unknown/error text, retain normalized error class |
+| Secrets in session content or error strings | Redact credential-shaped strings before storage; raw error text only in the expiring content store; error classes derive from metadata, never from error text |
+| Breach of stored session content | Encryption at rest, forced RLS, content-free logs and hard deletion within 30 days bound what can be exposed |
 | Stale-head merge race | Expected SHA enforced at action boundary; host protections remain authoritative |
 | Unbounded raw trace storage | Explicit retention/quota and decompressed request limits; storage growth alarms |
 | Tenant leakage via cached exports | Authorization on each download; private object prefixes, revocation-aware gateway |

@@ -1,0 +1,39 @@
+# Three real products, grouped the way a customer actually would: by product,
+# not by language. This is the grouping that makes the project tier mean
+# something — a project metric is recomputed from the union of its
+# repositories' raw records, so "review coverage for Edge+" is a real figure
+# and not an average of averages.
+
+projects:
+  Edge+:
+    description: >
+      Asset Strategies Group's Edge+ platform: the main application plus six
+      services behind it. The widest spread of repository sizes in the
+      portfolio, which is what makes its rollup worth reading.
+    repos:
+      - taazaainc/ASG-AssetStrategiesGroup-EdgePlus
+      - taazaainc/ASG-Edgeplus-User-Service
+      - taazaainc/ASG-Edgeplus-UI
+      - taazaainc/ASG-Edgeplus-Audit-Service
+      - taazaainc/ASG-Edgeplus-Api-Gateway
+      - taazaainc/ASG-Edgeplus-Documents-Service
+      - shashanksaxena-tz/ASG-Edgeplus-Configuration-Service
+
+  City of Dublin:
+    description: >
+      Municipal assessing and document workflow. A frontend, an assessing
+      officer application, and two services.
+    repos:
+      - taazaainc/COD-CityOfDublin-Frontend
+      - taazaainc/COD-CityOfDublin-AssessingOfficer
+      - taazaainc/COD-CityOfDublin-DataService
+      - taazaainc/COD-CityOfDublin-DocAI-Service
+
+  MasterCRM:
+    description: >
+      CRM backend, AI service and the Kindle integration.
+    repos:
+      - taazaainc/MC-MasterCRM-Backend
+      - taazaainc/MC-MasterCRM-AI-SVC
+      - taazaainc/MC-MasterCRM
+      - taazaainc/dayko-kindle-backend

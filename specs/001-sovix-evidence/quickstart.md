@@ -41,6 +41,6 @@ The demo must run with application networking blocked, produce honest unavailabl
 
 ## Planned hosted evaluation
 
-After M2 implementation, configure OIDC, a dedicated PostgreSQL application role without owner/BYPASSRLS rights, private object storage and a read-only GitHub App installation. An administrator selects repositories and registers a metadata-only collector explicitly. Use synthetic telemetry first, then separately authorize real source collection. Production actions remain disabled until M4 acceptance and shadow qualification.
+After M2 implementation, configure OIDC, a dedicated PostgreSQL application role without owner/BYPASSRLS rights, private object storage and a read-only GitHub App installation. An administrator selects repositories and registers a collector explicitly; its install output states once that prompts, responses and tool output are captured and kept up to 30 days (ADR-016). Use synthetic telemetry first, then separately authorize real source collection. Production actions remain disabled until M4 acceptance and shadow qualification.
 
 No credentials, cloud deployments, remote Git repositories or host write permissions are created by this specification setup.

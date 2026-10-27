@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sovix — Evidence</title>
+<script>(function(){try{var t=localStorage.getItem("sovix-theme");if(!t)t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme="light";}})();</script>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230071e3'/%3E%3Ctext x='16' y='22' font-family='-apple-system,Helvetica,Arial,sans-serif' font-weight='600' font-size='17' fill='white' text-anchor='middle'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/app.css">
+<style>
+  .inputs-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .inputs-grid .ipt {
+    border: 1px solid var(--hairline); border-radius: var(--r-inner); padding: 4px 9px;
+    font-size: 11px; color: var(--ink-3); background: var(--surface);
+  }
+  .inputs-grid .ipt b { font-family: var(--mono); font-size: 12px; color: var(--ink); font-weight: 500; display: block; }
+  .srcfoot { display: flex; justify-content: center; padding: 7px; border-top: 1px solid var(--hairline); }
+</style>
+</head>
+<body>
+<main id="main" class="container"></main>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  const { C, esc, el, qs, header, colophon, revealInit, barChart, segBar, distPlot, fmtVal,
+          scopeOrder, scope, scopeHref, metricHref, metricAt, displayOf, splitDisplay, isNA,
+          isFloor, tierChip, confChip, floorChip, toolbarTitle, statusSlot } = window.SVX;
+  header("ledger");
+  const main = document.getElementById("main");
+
+  const skey = qs("scope") && C.scopes[qs("scope")] ? qs("scope") : C.root_scope;
+  const mid = qs("metric") || "delivery.lead_time_p50";
+  const sc = scope(skey);
+  const m = metricAt(skey, mid) || sc.metrics[0];
+  const meta = scopeOrder().find((s) => s.key === skey);
+  const famKey = m.family;
+  const fam = C.glossary.families[famKey] || { label: famKey, metric_ids: [] };
+  document.title = "Sovix — " + m.label + " — " + meta.label;
+  /* The metric's name lives once, on the page, next to its value. The toolbar
+     carries the window's role and context instead — no duplicated title. */
+  toolbarTitle("The evidence", fam.label + " · " + meta.label);
+
+  /* "Better" is a verdict, and this product does not make verdicts about a
+     measurement — packages/renderer tokens name it explicitly:
+     BANNED_DIRECTION_WORD = "better" // never appears in rendered copy.
+     The exporter's field name stays `higher_is_better` because that is data;
+     what a reader sees says "preferred", which states the convention without
+     grading the number. */
+  const dirText = {
+    lower_is_better: "Lower is generally preferred",
+    higher_is_better: "Higher is generally preferred",
+    neutral: "Neither direction is preferred — context decides",
+  }[m.direction] || "Context decides";
+
+  /* ---------- crumbs ---------- */
+  main.appendChild(el(`<nav class="crumbs rv" aria-label="Breadcrumb">
+    <a href="index.html">Report</a><span class="sep">/</span>
+    <a href="${scopeHref(skey)}">${esc(meta.label)}</a><span class="sep">/</span>
+    <span>${esc(fam.label)}</span><span class="sep">/</span>
+    <span aria-current="page">${esc(m.label)}</span>
+  </nav>`));
+
+  /* ---------- hero: the value, and the sample it stands on ---------- */
+  const d = splitDisplay(m.display);
+  const unitish = d.num != null && (d.suffix === "" || d.suffix.startsWith(" ") || d.suffix === "%");
+  const heroText = (isFloor(m) ? "≥ " : "") + (unitish ? d.num : m.display);
+  const valueHTML = isNA(m)
+    ? `<div class="hero-num na">Not available</div>`
+    : `<div class="hero-num${heroText.length > 9 ? " long" : ""}"><span>${esc(heroText)}</span>${unitish && d.suffix.trim() ? `<span class="unit">${esc(d.suffix.trim())}</span>` : ""}</div>`;
+
+  const hero = el(`<section class="evi-hero">
+    <div class="hero-card hero-val rv">
+      <h1>${esc(m.label)}</h1>
+      ${valueHTML}
+      <div class="evi-meta">${tierChip(m)}${confChip(m)}${floorChip(m)}<span class="chip">${esc(dirText)}</span></div>
+      <p class="direction-note">Direction is stated in words, never encoded as colour or rank.${isFloor(m) ? " This figure counts only tools that left a trace — read it aloud as “at least”, never as “this much”." : ""}</p>
+    </div>
+    <div class="hero-card hero-sample rv d1">
+      <h3 class="chart-card-h" style="font-size:13px;font-weight:600;margin-bottom:6px"><span class="overline" style="display:block;margin-bottom:3px">The sample</span>What was counted, and what was left out</h3>
+      <div class="samplehost"></div>
+    </div>
+  </section>`);
+  main.appendChild(hero);
+  segBar(hero.querySelector(".samplehost"), m.sample);
+
+  /* ---------- chart band: the trend, and this scope's position ---------- */
+  const series = (sc.series || []).find((s) => s.metric_id === m.id);
+  const hasSeries = !!(series && series.points && series.points.length > 1);
+  const band = el(`<div class="chart-band${hasSeries ? "" : " single"}"></div>`);
+  main.appendChild(band);
+
+  if (hasSeries) {
+    const mcard = el(`<section class="chart-card rv d1" aria-label="Month by month">
+      <h3><span class="overline">Month by month</span>${esc(series.label)}</h3>
+      ${series.note ? `<p class="chart-note">${esc(series.note)}</p>` : ""}
+      <div class="charthost"></div>
+      <p class="covnote mt8">A missing month is drawn as a gap, never bridged.</p>
+    </section>`);
+    band.appendChild(mcard);
+    barChart(mcard.querySelector(".charthost"), series, { h: 340 });
+  }
+
+  const rows = scopeOrder().map((s) => {
+    const mm = metricAt(s.key, m.id);
+    return {
+      label: s.label,
+      level: s.level,
+      value: mm ? mm.value : null,
+      display: mm && mm.value != null ? displayOf(mm) : null,
+      href: metricHref(m.id, s.key),
+      current: s.key === skey,
+    };
+  });
+  const scard = el(`<section class="chart-card rv d2" aria-label="The same question at every scope">
+    <div class="chart-head">
+      <h3><span class="overline">The same question, elsewhere</span>This scope's position among all ${esc(fmtVal(rows.length))}</h3>
+      <span class="popup-wrap"><select class="popup" id="scopesel" aria-label="View this metric at another scope">
+        ${scopeOrder().map((s) => `<option value="${esc(s.key)}" ${s.key === skey ? "selected" : ""}>${esc({ org: "", project: "  ", repo: "    " }[s.level] + s.label)}</option>`).join("")}
+      </select></span>
+    </div>
+    <div class="disthost"></div>
+    <p class="covnote mt8">Scopes are compared; people never are. Absence stays “Not available”, never zero.</p>
+  </section>`);
+  band.appendChild(scard);
+  distPlot(scard.querySelector(".disthost"), rows, { unit: m.unit });
+  document.getElementById("scopesel").addEventListener("change", (e) => {
+    location.href = metricHref(m.id, e.target.value);
+  });
+
+  /* ---------- the working — the product's whole argument ---------- */
+  const inputs = Object.entries(m.inputs || {})
+    .map(([k, v]) => `<span class="ipt">${esc(k)}<b>${esc(typeof v === "number" ? fmtVal(v) : String(v))}</b></span>`).join("");
+  main.appendChild(el(`<section class="working rv">
+    <h3><span class="overline">The working</span>How this number was computed</h3>
+    <div class="formula">${esc(m.formula)}</div>
+    ${inputs ? `<div class="inputs-grid">${inputs}</div>` : ""}
+  </section>`));
+
+  /* ---------- absence explained ---------- */
+  if (isNA(m)) {
+    main.appendChild(el(`<div class="panel rv" style="margin-top:16px;border-color:var(--hairline-strong)">
+      <h3><span class="overline">Why there is no value</span>Absence is not zero</h3>
+      ${(m.caveats || []).map((c) => `<p>${esc(c)}</p>`).join("")}
+      ${m.no_sources_reason ? `<p class="mt8">${esc(m.no_sources_reason)}</p>` : ""}
+    </div>`));
+  }
+
+  /* ---------- reading + care: prose carries the interpretation,
+       the aside carries caveats, window, and provenance ---------- */
+  const cavs = (m.caveats || []), asms = (m.assumptions || []);
+  const w = m.scope || {};
+  const hasCare = !isNA(m) && (cavs.length || asms.length);
+  const carePanel = hasCare ? `<div class="panel rv d1">
+        <h3><span class="overline">Read with care</span>Assumptions and caveats</h3>
+        ${asms.length ? `<div class="overline" style="margin:8px 0 2px">Assumed</div><ul class="cavlist">${asms.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>` : ""}
+        ${cavs.length ? `<div class="overline" style="margin:10px 0 2px">Caveats</div><ul class="cavlist">${cavs.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+        ${m.no_sources_reason ? `<div class="overline" style="margin:10px 0 2px">Sources</div><p class="small dim" style="padding-top:4px">${esc(m.no_sources_reason)}</p>` : ""}
+      </div>` : "";
+  const proseBand = el(`<div class="prose-band${hasCare ? " cols3" : ""}">
+    <div class="pb-left">
+      <div class="panel rv">
+        <div class="overline prose-label">In plain English</div>
+        <p class="prose lede">${esc(m.plain_english)}</p>
+        <div class="overline prose-label">Why it matters</div>
+        <p class="prose">${esc(m.why_it_matters)}</p>
+        <div class="overline prose-label">How to read it</div>
+        <p class="prose">${esc(m.how_to_read)}</p>
+      </div>
+    </div>
+    ${carePanel}
+    <div class="pb-right">
+      <div class="panel rv d2">
+        <h3><span class="overline">The window</span>What this scope covers</h3>
+        <ul class="xlist">
+          <li><span>From</span><span class="num">${esc((w.since || "").slice(0, 10))}</span></li>
+          <li><span>Until</span><span class="num">${esc((w.until || "").slice(0, 10))}</span></li>
+          ${(w.repos || []).map((r) => `<li><span>repo</span><span class="num">${esc(r)}</span></li>`).join("")}
+        </ul>
+      </div>
+      <div class="panel rv d3">
+        <h3><span class="overline">How it was obtained</span>Tier and confidence</h3>
+        <p><b>${esc(m.tier)}</b> — ${esc((C.data_quality.tier_legend || {})[m.tier] || "")}</p>
+        <p><b>${esc(m.confidence)} confidence</b> — ${esc((C.data_quality.confidence_legend || {})[m.confidence] || "")}</p>
+      </div>
+    </div>
+  </div>`);
+  main.appendChild(proseBand);
+
+  /* ---------- exemplars ---------- */
+  const ex = (m.exemplars || []);
+  if (ex.length) {
+    main.appendChild(el(`<section class="section" style="padding-bottom:0">
+      <div class="section-head rv">
+        <h2>The strongest evidence</h2>
+        <span class="note">Why this number is what it is — the records that weigh most.</span>
+      </div>
+      <div class="exgrid">
+      ${ex.map((e) => {
+        const src = e.source || {};
+        return `<div class="exemplar rv d1">
+          <span class="rank">Nº ${esc(e.rank)}</span>
+          <h4>${src.url ? `<a href="${esc(src.url)}" target="_blank" rel="noopener">${esc(e.headline)}</a>` : esc(e.headline)}</h4>
+          <p class="why">${esc(e.why_this_proves_it)}</p>
+          <div class="meta">
+            ${e.weight != null ? `<span class="num">${esc(fmtVal(e.weight))} ${esc(e.weight_unit || "")}</span>` : ""}
+            ${e.share_of_total_pct != null ? `<span class="num">${esc(fmtVal(e.share_of_total_pct))}% of the total</span>` : ""}
+            ${src.repo ? `<span>${esc(src.repo)}</span>` : ""}
+            ${src.ref ? `<span class="num">${esc(src.ref)}</span>` : ""}
+          </div>
+        </div>`;
+      }).join("")}
+      </div>
+    </section>`));
+  }
+
+  /* ---------- sources ---------- */
+  const srcs = (m.sources || []);
+  statusSlot(fmtVal(srcs.length) + " source record" + (srcs.length === 1 ? "" : "s") + " · " + meta.label);
+  if (srcs.length) {
+    const CAP = 8;
+    const row = (s) => {
+      const v = s.values || {};
+      const date = (s.occurred_at || "").slice(0, 10);
+      return `<tr>
+        <td class="nowrap"><a href="${esc(s.url)}" target="_blank" rel="noopener" class="num">${esc(s.ref)}</a>
+          <div class="src-detail">${esc(s.kind.replace(/_/g, " "))}</div></td>
+        <td>${esc(s.detail)}${v.title ? `<span class="src-title" title="${esc(v.title)}">${esc(v.title)}</span>` : ""}</td>
+        <td class="nowrap small">${esc(s.repo || "")}</td>
+        <td class="r num nowrap">${esc(date)}</td>
+      </tr>`;
+    };
+    const first = srcs.slice(0, CAP).map(row).join("");
+    const rest = srcs.slice(CAP).map(row).join("");
+    const block = el(`<div class="panel rv" style="padding:0;margin-top:16px">
+      <div style="padding:12px 14px 6px"><h3><span class="overline">Every record attached</span>The commits and pull requests behind this number</h3>
+      <p class="small dim">${esc(fmtVal(srcs.length))} source record${srcs.length === 1 ? "" : "s"} attached to this metric at this scope. Links open on GitHub.</p></div>
+      <div class="table-scroll" style="border:none;border-top:1px solid var(--hairline);border-radius:0">
+        <table class="data striped" style="min-width:560px"><thead><tr><th>Ref</th><th>What it shows</th><th>Repository</th><th class="r">Date</th></tr></thead>
+        <tbody>${first}</tbody><tbody class="more hide">${rest}</tbody></table>
+      </div>
+      ${rest ? `<div class="srcfoot"><button class="push showmore" type="button" aria-expanded="false">Show all ${esc(fmtVal(srcs.length))} records</button></div>` : ""}
+    </div>`);
+    main.appendChild(block);
+    const btn = block.querySelector(".showmore");
+    if (btn) btn.addEventListener("click", () => {
+      const more = block.querySelector(".more");
+      const open = more.classList.toggle("hide");
+      btn.setAttribute("aria-expanded", String(!open));
+      btn.textContent = open ? "Show all " + fmtVal(srcs.length) + " records" : "Show fewer";
+    });
+  } else if (m.no_sources_reason && isNA(m)) {
+    /* reason already shown in the absence panel */
+  }
+
+  /* ---------- prev / next within family ---------- */
+  const ids = fam.metric_ids;
+  const idx = ids.indexOf(m.id);
+  const prev = idx > 0 ? metricAt(skey, ids[idx - 1]) : null;
+  const next = idx >= 0 && idx < ids.length - 1 ? metricAt(skey, ids[idx + 1]) : null;
+  if (prev || next) {
+    main.appendChild(el(`<div class="pn rv" style="margin-bottom:28px">
+      ${prev ? `<a href="${metricHref(prev.id, skey)}"><span class="k">← Previous in ${esc(fam.label)}</span><div class="t">${esc(prev.label)}</div></a>` : "<span></span>"}
+      ${next ? `<a class="next" href="${metricHref(next.id, skey)}"><span class="k">Next in ${esc(fam.label)} →</span><div class="t">${esc(next.label)}</div></a>` : ""}
+    </div>`));
+  } else {
+    main.appendChild(el(`<div style="height:28px"></div>`));
+  }
+
+  colophon();
+  revealInit();
+})();
+</script>
+</body>
+</html>

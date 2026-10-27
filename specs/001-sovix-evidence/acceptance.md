@@ -27,8 +27,8 @@ contains `input/`, `expected/`, and, when relevant, `mutations/`. `expected/mani
 contains the pinned source revision IDs, schema and calculator versions, scope/window,
 availability, exclusions, coverage, and canonical digest. HTTP fixtures include principal,
 workspace and project IDs. Git fixtures are bare repositories with an adjacent clock and
-expected object-ID file. OTLP fixtures contain only allowlisted metadata plus deliberately
-forbidden canaries in negative inputs. Browser assertions consume the same expected manifest
+expected object-ID file. OTLP fixtures contain allowlisted metadata, synthetic session content
+and deliberately forbidden canaries in negative inputs. Browser assertions consume the same expected manifest
 as API and export assertions.
 
 ## AC-US1 — Historical baseline (FR-001–FR-006)
@@ -125,13 +125,19 @@ predictable suffix in both tenants to expose missing namespace checks.
 - **AC-US3.2 / FR-014 — role and project isolation**: The role matrix is exercised against
   record, search, job, cache, blob and export identifiers, including guessed cross-tenant IDs
   and background jobs. Every inaccessible resource returns the same 404 body and timing class.
-  Negative: an analyst without a project grant and every cross-tenant principal retrieve zero
+  Session content is read by its own developer, owner, admin and a granted analyst only. An
+  unfiltered session list holds only the caller's own sessions; another developer's sessions are
+  listed one developer per request with their handle, never ordered by a metric. Positive: an
+  owner and a granted analyst list `unattributed=true` sessions (null contributor, no handle)
+  without a subject audit event; reading one's content writes the usual audit event.
+  Negative: an analyst without a project grant, an internal viewer reading another person's
+  session content, an `is_external` principal and every cross-tenant principal retrieve zero
   bytes and learn no count, owner name or existence signal.
 - **AC-US3.3 / FR-015 — connector scope and revocation**: Admin connects only repository `r1`,
   rotates its scoped credential, then revokes it. The next sync makes no source call and health
   becomes `revoked`; old snapshots remain immutable with revoked/freshness annotation. Negative:
   selecting an uninstalled repository or using the revoked credential cannot enqueue collection.
-- **AC-US3.4 / FR-016 — aggregate output**: Standard report JSON, HTML, CSV and browser views
+- **AC-US3.4 / FR-016 — aggregate output**: Standard report JSON, HTML, CSV and browser report views
   contain aggregate people counts but no raw name, email, prompt, source body, tool arguments or
   tool output canaries. Negative: adding a forbidden field to an adapter object fails the output
   schema rather than silently exposing it.
@@ -141,9 +147,11 @@ predictable suffix in both tenants to expose missing namespace checks.
   one-person filters or leaderboards return `UNSUPPORTED_FILTER` and cannot reveal values via
   chart coordinates, tooltips, totals or downloads.
 - **AC-US3.6 / FR-018 — content-free audit**: Successful and denied access-sensitive changes,
-  connector rotation/revocation, policy changes and exports record actor, action, scope, time and
-  result. Negative: audits contain no prompt, token, source description, credential, request body
-  or report value canary.
+  connector rotation/revocation, policy changes, exports and session-content reads record actor,
+  action, scope, time and result. A content read also records the subject handle and session ID,
+  is listed only to owner and admin, and creates no subject notification or view-of-me entry.
+  Negative: audits contain no prompt, token, source description, credential, request body or
+  report value canary, and a forced content-read audit-write failure returns no content.
 
 ## AC-US4 — Coding-agent telemetry (FR-019–FR-024)
 
@@ -153,16 +161,22 @@ predictable suffix in both tenants to expose missing namespace checks.
 
 Fixture `AC-US4` has one completed Codex CLI session, canonical parent-owned input/output token
 units, child-inclusive spans, duplicate and late spans, a conflicting duplicate, an unsupported
-cache field, and forbidden canaries `PROMPT_CANARY`, `EMAIL_CANARY` and `SECRET_CANARY`.
+cache field, a prompt containing `PROMPT_CANARY` and `SECRET_CANARY`, a second session sent without
+content, a third with content on only some spans, and forbidden canary `EMAIL_CANARY` in an
+unknown attribute.
 
 - **AC-US4.1 / FR-019 — scoped collector**: Admin registration returns a once-visible,
-  project-bound ingestion credential plus runtime, version and capability metadata. Rotation
+  project-bound ingestion credential plus runtime, version and capability metadata, and its
+  install output states once that session content is captured and kept up to 30 days. Rotation
   invalidates the old token; revocation stops acceptance. Negative: a valid token for project A
   cannot ingest a repository ID belonging to project B.
 - **AC-US4.2 / FR-020 — allowlist at both boundaries**: Allowed identifiers, timestamps,
-  normalized model/tool/error class and token categories persist. Prompt, email, secret, raw
-  exception text, absolute CWD and unknown attributes do not appear in DB, quarantine, logs,
-  audits, backups or exports. Negative: log capture across a rejected batch finds no canary.
+  normalized model/tool/error class and token categories persist as metadata. `PROMPT_CANARY`
+  persists only in the session-content store, with `SECRET_CANARY` replaced by a counted
+  redaction marker. Email, secret, absolute CWD and unknown attributes do not appear in DB,
+  quarantine, logs, audits, backups or exports; prompt and raw exception text do not appear in
+  quarantine, logs, audits, events, snapshots or exports. Negative: log capture across a rejected
+  batch finds no canary, and no metric input references session content.
 - **AC-US4.3 / FR-021 — lineage identity**: Accepted records preserve sanitized session,
   trace, span, event-time, runtime/source version and revision identity sufficient to reproduce
   deduplication. Negative: a record missing required identity is partially rejected with a field
@@ -177,7 +191,10 @@ cache field, and forbidden canaries `PROMPT_CANARY`, `EMAIL_CANARY` and `SECRET_
   partially rejected whole batch does not duplicate its accepted subset.
 - **AC-US4.6 / FR-024 — unsupported and outage states**: Missing cache semantics is
   `unsupported` and null; collector outage is a health interval with an observed-through
-  watermark. Negative: neither becomes zero, complete coverage, or a healthy interval.
+  watermark. The session sent without content is `content_state=missing` with its reason and is
+  counted in collection coverage; the third session is `partial`; content past expiry is `expired`
+  with its deletion time while its metadata stays readable.
+  Negative: none becomes zero, complete coverage, a healthy interval or an empty conversation.
 
 ## AC-US5 — Linkage and cost allocation (FR-025–FR-030)
 
@@ -259,7 +276,11 @@ and workspace quotas one unit below/at/above their limits.
 
 - **AC-US7.1 / FR-037 — bounded retention**: Admin can choose only documented ranges and sees
   the computed next purge instant in the selected timezone and UTC. Boundary values succeed.
-  Negative: below/above-range values and analyst changes fail without altering the active policy.
+  Session content is hard-deleted no later than 30 days after session end (last received span if
+  never finalized), or sooner if set; shortening deletes stored content past the new bound.
+  Negative: below/above-range values, a session-content period of 0 or above 30 days, spans_days
+  not greater than session_content_days (equal values included) and analyst changes fail without
+  altering the active policy.
 - **AC-US7.2 / FR-038 — fenced deletion**: Deletion immediately fences writes, cancels or
   resolves scoped jobs, removes governed rows/blobs/index entries, revokes dependent snapshots
   and exports, and leaves only content-free tombstones. Multi-project snapshots are revoked in
@@ -272,13 +293,20 @@ and workspace quotas one unit below/at/above their limits.
   queue age, failure rates and CPU/storage counts. Negative: exhaustive event/log attributes
   contain no report values, prompts, source text, token payloads, names or credentials.
 - **AC-US7.5 / FR-041 — tombstone-aware restore**: Restore is inaccessible to users until
-  tombstones newer than the backup are reapplied. After reapplication, deleted payload remains
-  absent while unaffected projects recover; drill records measured RPO/RTO against 24h/4h
-  objectives. Negative: starting the web/API read path before tombstone replay fails closed.
+  tombstones newer than the backup are reapplied and session content past its expiry is purged.
+  After reapplication, deleted payload and expired content remain absent while unaffected
+  projects recover; drill records measured RPO/RTO against 24h/4h objectives. Negative: starting
+  the web/API read path before tombstone replay and content purge fails closed.
 - **AC-US7.6 / FR-042 — predictable quotas**: The at-limit request follows the documented
   boundary; an over-limit ingest/export receives a stable limit code, current limit, reset/retry
   path and no half-written result. Negative: rejected or unknown-loss data cannot increase
   completeness or move a watermark beyond the last accepted event.
+- **AC-US7.7 / FR-037, FR-041 — crypto-shredded content**: A backup taken while a session's content
+  was live is restored after that content's session-end-day key is destroyed; its ciphertext cannot
+  be decrypted and no key exists in any database backup. Shortening retention destroys affected
+  keys early, a still-open session's content moves from its provisional key to its end-day key
+  when it ends, and coaching text quoting that session becomes unreadable with its key. Negative:
+  plaintext recovered from the backup, or a content key found in any backup, fails the case.
 
 ## AC-US8 — Production outcomes and comparisons (FR-043–FR-048)
 
@@ -462,10 +490,12 @@ window or a timestamp without display timezone fails.
 ### AC-NFR010 — Secret/content exclusion
 
 **Path/command**: `tests/security/test_sensitive_canaries.py`; planned
-`uv run pytest tests/security/test_sensitive_canaries.py`. Unique canaries seeded in prompts,
-exception messages, tool I/O, names, email, CWD, credentials and unknown fields are absent from
-accepted storage, logs, dead letters, backup, audit and standard exports. Negative: each sink is
-mutated once to retain a canary and the suite must identify the exact sink.
+`uv run pytest tests/security/test_sensitive_canaries.py`. Unique canaries seeded in names,
+email, CWD, credentials and unknown fields are absent from accepted storage, logs, dead letters,
+backup, audit and standard exports. Canaries seeded in prompts, exception messages and tool I/O
+are present only in the session-content store until expiry, with any credential inside them
+redacted, and absent from every other sink. Negative: each sink is mutated once to retain a
+canary and the suite must identify the exact sink.
 
 ### AC-NFR011 — Contract compatibility
 

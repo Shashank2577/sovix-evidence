@@ -1,0 +1,660 @@
+/**
+ * Evidence index and record (SPEC §5.8, §5.9, §7.4).
+ *
+ * Tokens only — every colour here resolves through `index.css`, so both themes are
+ * designed rather than inverted (§2.3). No rule in this file animates on scroll: the
+ * list is a thousand rows long and row-level motion at that count reads as jank
+ * (§8.8).
+ */
+
+/* --------------------------------------------------------------- controls */
+
+.ev-controls {
+  display: grid;
+  gap: 13px;
+  margin-top: 26px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.ev-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 430px;
+  height: 38px;
+  padding: 0 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-switcher);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.ev-search:focus-within {
+  border-color: var(--accent-border-hover);
+  box-shadow: var(--shadow-switcher-hover);
+}
+.ev-search > svg {
+  flex: none;
+  color: var(--text-3);
+}
+.ev-search input {
+  width: 100%;
+  min-width: 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+}
+.ev-search input::placeholder {
+  color: var(--text-3);
+}
+.ev-search input:focus {
+  outline: none;
+}
+.ev-search__clear {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border-radius: 50%;
+}
+.ev-search__clear:hover {
+  color: var(--accent-ink);
+  background: var(--surface-3);
+}
+
+.ev-facets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ev-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ev-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 11px;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+.ev-chip svg {
+  color: var(--ornament);
+}
+.ev-chip:hover {
+  color: var(--accent-ink);
+  border-color: var(--accent-border-hover);
+}
+.ev-chip[data-active="true"] {
+  color: var(--accent-ink-text);
+  background: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+.ev-chip[data-active="true"] svg,
+.ev-chip[data-active="true"] .ev-chip__count {
+  color: inherit;
+}
+.ev-chip__count {
+  color: var(--text-3);
+  font: 600 10px "DM Mono", monospace;
+}
+
+.ev-repo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ev-repo select {
+  height: 28px;
+  max-width: 240px;
+  padding: 0 8px;
+  color: var(--text-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.ev-repo select:hover {
+  color: var(--accent-ink);
+  border-color: var(--accent-border-hover);
+}
+
+.ev-count {
+  margin: 0;
+  color: var(--text-3);
+  font: 10px "DM Mono", monospace;
+  letter-spacing: 0.03em;
+}
+
+/* ---------------------------------------------------------------- banner */
+
+.ev-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 22px;
+  padding: 14px 17px;
+  background: var(--surface-tint);
+  border: 1px solid var(--accent-border-hover);
+  border-radius: 9px;
+}
+.ev-banner p {
+  margin: 6px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.ev-banner strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.ev-banner--absent {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+.ev-banner--absent p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ev-banner .quiet-button {
+  flex: none;
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------------ list */
+
+/**
+ * The spacer holds the full height of every record so the scrollbar describes the
+ * real list; `.ev-list__window` carries only the rows in view and is translated
+ * into place. `contain` keeps a row's layout and paint work inside itself, which is
+ * what stops a thousand-row list from recalculating style on every scroll frame.
+ */
+.ev-list {
+  position: relative;
+  margin-top: 4px;
+}
+.ev-list__window {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  will-change: transform;
+}
+.ev-row-slot {
+  contain: layout paint style;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.ev-row {
+  display: grid;
+  grid-template-columns: 26px minmax(150px, 29%) 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  height: 100%;
+  padding: 0 10px;
+  color: var(--text);
+  border-radius: 7px;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.ev-row:hover {
+  background: var(--surface-hover);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.ev-row:active {
+  background: var(--surface-2);
+}
+
+.ev-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 6px;
+}
+.ev-row__icon--pull_request {
+  color: var(--tier-measured);
+  background: var(--tier-measured-bg);
+}
+.ev-row__icon--release {
+  color: var(--tier-inferred);
+  background: var(--tier-inferred-bg);
+}
+.ev-row__icon--branch,
+.ev-row__icon--dataset {
+  color: var(--tier-proxy);
+  background: var(--tier-proxy-bg);
+}
+
+.ev-row__main {
+  display: contents;
+}
+.ev-row__ref {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font: 700 11px "DM Mono", monospace;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ev-row__sub {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+  overflow: hidden;
+}
+.ev-row__detail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ev-row__when {
+  flex: none;
+  color: var(--text-3);
+  font: 10px "DM Mono", monospace;
+  white-space: nowrap;
+}
+.ev-row__when--none {
+  font-style: italic;
+}
+/* The inline copy belongs to the ≤510 layout (§7.4); the column carries it above. */
+.ev-row__when--inline {
+  display: none;
+}
+.ev-row__cited {
+  flex: none;
+  padding: 4px 9px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 999px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.ev-row:hover .ev-row__cited {
+  color: var(--accent-ink);
+  background: var(--surface-3);
+}
+
+/* ------------------------------------------------------------ the record */
+
+.ev-card {
+  margin-top: 24px;
+  padding: 24px 26px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  box-shadow: var(--shadow-card);
+}
+
+.ev-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 11px;
+}
+.ev-card__head--stacked {
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.ev-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 999px;
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ev-kind--pull_request {
+  color: var(--tier-measured);
+  background: var(--tier-measured-bg);
+}
+.ev-kind--release {
+  color: var(--tier-inferred);
+  background: var(--tier-inferred-bg);
+}
+.ev-kind--branch,
+.ev-kind--dataset {
+  color: var(--tier-proxy);
+  background: var(--tier-proxy-bg);
+}
+.ev-card__ref {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font: 700 12px "DM Mono", monospace;
+}
+.ev-card__when {
+  margin-left: auto;
+  color: var(--text-3);
+  font: 10px "DM Mono", monospace;
+}
+.ev-card__when--none {
+  font-style: italic;
+}
+.ev-card__detail {
+  margin: 14px 0 0;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ev-card__kicker {
+  margin: 22px 0 0;
+}
+
+.ev-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 12px 0 0;
+  overflow: hidden;
+  background: var(--border-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+/* An odd number of facts would otherwise leave a grey half-row where the grid's
+   gap shows through; the last one takes the width instead. */
+.ev-facts__row:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.ev-facts__row {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 12px;
+  background: var(--surface);
+}
+.ev-facts dt {
+  flex: none;
+  color: var(--text-3);
+  font-size: 11px;
+}
+.ev-facts dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font: 11px "DM Mono", monospace;
+  text-align: right;
+}
+
+.ev-card__out {
+  margin-top: 20px;
+  text-decoration: none;
+}
+.ev-card__nolink {
+  margin: 20px 0 0;
+  padding: 11px 13px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+/* ------------------------------------------------------------ counted in */
+
+.ev-cited__title {
+  margin: 7px 0 0;
+  color: var(--text);
+  font: 600 21px/1.1 "Fraunces", Georgia, serif;
+  letter-spacing: -0.028em;
+}
+.ev-cited__lede {
+  max-width: 420px;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.ev-cite-list {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ev-cite {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border-soft);
+}
+.ev-cite:first-child {
+  border-top: 0;
+}
+.ev-cite__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 7px;
+  margin-left: -7px;
+  border-radius: 7px;
+  text-decoration: none;
+}
+.ev-cite__body:hover {
+  background: var(--surface-hover);
+}
+.ev-cite__label {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ev-cite__scope {
+  color: var(--text-3);
+  font-size: 10.5px;
+}
+.ev-cite__reading {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+}
+.ev-cite__value {
+  color: var(--text);
+  font: 700 13px "DM Mono", monospace;
+  letter-spacing: -0.02em;
+}
+.ev-cite__working {
+  flex: none;
+}
+
+/* --------------------------------------------------------------- states */
+
+.ev-skeleton-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+.ev-skeleton-card {
+  margin-top: 24px;
+  border-radius: 11px;
+}
+
+/* ------------------------------------------------- compact (≤1080, ≤780) */
+
+@media (max-width: 1080px) {
+  .ev-row {
+    grid-template-columns: 26px minmax(110px, 26%) 1fr auto auto;
+    gap: 11px;
+  }
+}
+
+/**
+ * ≤780: two lines (§1.5 — the mobile index is search + chips + cards). The row
+ * becomes a 2×3 grid: reference and citation chip on the first line, detail and
+ * time on the second. Height comes from the virtualizer's constant, so any change
+ * here has to move with `ROW_HEIGHT_COMPACT`.
+ */
+@media (max-width: 780px) {
+  .ev-controls {
+    gap: 11px;
+  }
+  .ev-search {
+    max-width: none;
+    height: 44px;
+  }
+  .ev-facets {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ev-chips {
+    width: 100%;
+    gap: 5px;
+  }
+  .ev-chip {
+    height: 32px;
+  }
+  .ev-repo {
+    width: 100%;
+  }
+  .ev-repo select {
+    flex: 1;
+    max-width: none;
+    height: 36px;
+  }
+
+  .ev-row {
+    grid-template-columns: 26px 1fr auto;
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 4px 11px;
+    padding: 0 8px;
+  }
+  .ev-row__icon {
+    grid-row: 1 / span 2;
+  }
+  .ev-row__ref {
+    grid-column: 2;
+    font-size: 11.5px;
+  }
+  .ev-row__cited {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .ev-row__sub {
+    grid-column: 2 / span 2;
+    grid-row: 2;
+  }
+  .ev-row__when {
+    display: none;
+  }
+  .ev-row__when--inline {
+    display: inline;
+  }
+
+  .ev-card {
+    padding: 20px 18px;
+  }
+  .ev-card__when {
+    width: 100%;
+    margin-left: 0;
+  }
+  .ev-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ev-card__head--stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .ev-cited__lede {
+    max-width: none;
+  }
+  /* §7.6 — 44px targets on touch. */
+  .ev-cite {
+    padding: 5px 0;
+  }
+  .ev-cite__body {
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
+/* ------------------------------------------------------------ small (≤510) */
+
+@media (max-width: 510px) {
+  /* §7.4 — the meta collapses to `repo ref · relative time`; the chip stays. */
+  .ev-row__detail {
+    display: none;
+  }
+  .ev-row__cited {
+    padding: 3px 7px;
+    font-size: 9.5px;
+  }
+  .ev-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  /*
+   * Two lines rather than a wrapped row: the metric and its scope above, the
+   * reading and its ⌗ below. Wrapping a flex row here stretched the ⌗ to the
+   * height of the whole item and left a citation taking a third of the screen —
+   * a record cited in twenty figures has to stay readable by scrolling, not by
+   * giving up on it.
+   */
+  .ev-cite {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 2px 10px;
+    padding: 6px 0;
+  }
+  .ev-cite__body {
+    grid-column: 1 / -1;
+    min-height: 40px;
+    padding: 2px 7px;
+  }
+  .ev-cite__reading {
+    grid-column: 1;
+    justify-content: flex-start;
+  }
+  .ev-cite__working {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}

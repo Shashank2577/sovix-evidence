@@ -1,6 +1,6 @@
 # ADR-013: Person-scope reporting gated by mode, role and subject
 
-**Status**: Accepted for specification | **Date**: 2026-09-12 | **Amends**: Constitution III, FR-017
+**Status**: Accepted for specification; rules 4 and 6 and the access matrix amended by [ADR-016](ADR-016-session-content-and-model-coaching.md) | **Date**: 2026-09-12 | **Amends**: Constitution III, FR-017
 
 ## Context
 
@@ -27,6 +27,8 @@ only when every condition for its row is satisfied.
 | Local individual view | Any operator of a local workspace, about that machine's repositories | Local only | None; the data never leaves the machine |
 | Team aggregate | Analyst and above, about a team of at least five humans | Local and hosted | `k<5` and complementary suppression apply |
 | Named-person operational view | Owner and admin only, with an explicit per-workspace `individual_attribution_enabled` flag, and only within a project they administer | Hosted | Access is audited per query; subject is notified |
+| Session content and metadata of another developer *(ADR-016)* | Owner and admin; analyst for sessions in a granted project. No flag required | Hosted | None within one developer; one subject per request; content reads audited for owner/admin only; subject not notified |
+| Coaching of another developer *(ADR-016)* | Owner and admin; analyst whose grant covers every project a finding cites | Hosted | None within one developer; one subject per request; audited for owner/admin only; subject not notified |
 | Ranking or leaderboard | Nobody | Nowhere | Prohibited outright and not implementable |
 
 Binding rules:
@@ -42,14 +44,20 @@ Binding rules:
 4. **Named-person views are audited and disclosed.** Every named-person query writes an
    `AuditEvent` naming the actor, the subject and the window. The subject can see who viewed
    their data. A leader who inspects an individual leaves a trace the individual can read.
+   *Amended by ADR-016:* reads of session content and of coaching are excluded. They are logged
+   for owner and admin only, and the subject is not notified and cannot list them.
 5. **Published artifacts are always pseudonymous.** No person-scoped artifact leaving the system
    may carry a plaintext identity, regardless of role. See ADR-014.
 6. **Coaching output belongs to its subject.** Individual coaching is generated for and visible to
    the contributor. It is not surfaced in a leader's view of that person.
+   *Amended by ADR-016:* coaching is visible to the developer, owner, admin and analysts whose
+   grant covers every project a finding cites. It is still never comparative across people.
 
 Constitution Principle III is amended: "Cohorts smaller than five distinct humans MUST be
 suppressed in hosted people breakdowns" gains the qualifier "except in a subject's view of
 themselves, in local mode, and in an audited, separately enabled named-person operational view".
+ADR-016 later adds a fourth exception: an owner's, admin's or granted analyst's read of one
+developer's sessions or coaching.
 
 ## Consequences
 

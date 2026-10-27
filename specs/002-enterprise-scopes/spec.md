@@ -96,15 +96,15 @@ until day 20, and changing today's membership does not change the historical res
 ### User Story 13 - See my own work (Priority: P2)
 
 A contributor links their identity, opens a view of their own activity at full fidelity with no
-suppression, and can see every named-person view another actor took of them.
+suppression, and can see every named-person metric view another actor took of them.
 
 **Why this priority**: Self-knowledge is the requirement FR-017 forbade by accident, and it is
 the requirement that makes the person scope defensible to the person.
 
 **Independent Test**: A user with one verified identity link and a second merged alias sees the
 union of both identities' records with no `k<5` suppression, sees nothing about any other
-contributor, and reads an audit list containing exactly the named-person queries whose subject
-was them.
+contributor, and reads an audit list containing exactly the named-person metric queries whose
+subject was them and no session-content or coaching read (ADR-016 rule 4).
 
 **Acceptance Scenarios**:
 
@@ -114,8 +114,9 @@ was them.
    are not linked to, **then** the request is denied regardless of their role.
 3. **Given** two contributor identities merged into one by an audited alias action, **when** the
    subject opens their own view, **then** both identities' records appear as one population.
-4. **Given** an owner who ran a named-person query about the subject, **when** the subject opens
-   their view-of-me record, **then** the actor, window, scope and time of that query are listed.
+4. **Given** an owner who ran a named-person metric query about the subject and read one of the
+   subject's sessions, **when** the subject opens their view-of-me record, **then** the actor,
+   window, scope and time of the metric query are listed and the session read is not.
 5. **Given** a Receipts `report.json` carrying `person` scopes with plaintext emails, names and a
    ranked `top_contributors` list, **when** it is imported, **then** each person resolves to a
    pseudonymous handle, no plaintext identity is persisted, and the ranked list is not imported at
@@ -190,6 +191,8 @@ found without revealing existence.
   repository is available.
 - A project containing a repository that no longer exists in any project after a mapping closes.
 - An external viewer in a workspace where `individual_attribution_enabled` is true.
+- A developer holding an internal viewer membership who reads their own session content, and an
+  analyst whose grant covers only some of the projects a coaching finding cites.
 - An AIBOM document whose `scope` is `team` but whose `repository` member is populated, and one
   whose `scope` is `project` but whose `repository` member is absent.
 - An AIBOM import whose `author_email` digests to a contributor already merged into an alias, and
@@ -352,6 +355,7 @@ found without revealing existence.
   | `contributor` filter, self | Yes | Yes | Yes | Yes | Denied |
   | `contributor` filter, another person, hosted | Only with `individual_attribution_enabled` and within an administered project | Same as owner | Denied | Denied | Denied |
   | `contributor` filter, another person, local | Yes | Yes | Yes | Yes | Not applicable |
+  | Sessions (one developer's sessions per request: list, handle, metadata, content) and coaching, another person (ADR-016) | All | All | Sessions in granted projects; a coaching finding only when every project it cites is granted | Denied | Denied |
 
 - **FR-088**: An analyst or viewer holding partial grants MUST receive a scope-resolution result
   restricted to their grant, and the response MUST state that the scope was restricted. It MUST
@@ -372,18 +376,35 @@ found without revealing existence.
 - **FR-092**: A contributor filter naming an identity the requesting user is not linked to MUST be
   denied in hosted mode unless the request satisfies every condition of the named-person row of
   FR-087: the actor is owner or admin, `individual_attribution_enabled` is true, and the scope is
-  inside a project that actor administers.
-- **FR-093**: Every named-person query MUST write one `AuditEvent` recording actor, subject
+  inside a project that actor administers. Listing one developer's sessions per request, filtered
+  to them with their handle, reading those sessions' metadata and content, and reading their coaching are not
+  blocked by these conditions: they are governed by FR-087's session row and FR-096 per ADR-016
+  rule 3 and its Clarifications, do not depend on the flag, never order sessions or developers by
+  a metric, and confer no named-person metric view.
+- **FR-093**: Every named-person metric query MUST write one `AuditEvent` recording actor, subject
   contributor handle, scope descriptor, window and time, and MUST deliver one notification to the
   subject's in-product inbox per FR-035. The audit write MUST succeed before the result is
-  returned; a failed audit write MUST fail the query.
-- **FR-094**: A subject MUST be able to list every named-person query whose subject was them,
-  including actor, scope and window, for the audit retention period.
+  returned; a failed audit write MUST fail the query. Session-content reads and reads of another
+  person's coaching are excluded, per ADR-016 rules 4 and 5: each read request MUST write exactly
+  one `AuditEvent` recording actor, subject handle, the session or finding IDs it returned
+  (possibly none) and time, including a request that returns nothing. That event carries no
+  content, is readable by owner and admin only and MUST NOT be shown or sent to the subject, and
+  no notification is delivered. The write MUST succeed before anything is returned; a failed
+  write MUST fail the read.
+- **FR-094**: A subject MUST be able to list every named-person metric query whose subject was
+  them, including actor, scope and window, for the audit retention period. Session-content and
+  coaching reads MUST NOT appear in that list; their owner/admin-only audit write gates the read
+  and a failed write fails it, per FR-093.
 - **FR-095**: A person-scoped artifact leaving the system MUST carry only the pseudonymous handle.
   No export, snapshot, published artifact or machine-readable manifest may carry a plaintext
   identity, regardless of the requesting role or the workspace flag.
-- **FR-096**: Individual coaching output MUST be generated for and visible to its subject and MUST
-  NOT appear in any other principal's view of that subject, including an owner's named-person view.
+- **FR-096**: Individual coaching output MUST be generated for its subject and MUST be visible only
+  to that subject, to owner and admin, and to an analyst whose grant covers every project the
+  finding cites, per ADR-016 rule 6 and ADR-013 rule 6 as amended. That access MUST NOT depend on
+  `individual_attribution_enabled`, and an internal viewer or `is_external` principal MUST NOT see
+  another person's coaching. No interface may order, rank, compare side by side or count
+  developers by coaching finding at any role (FR-090); a lead reads one developer's coaching at a
+  time.
 - **FR-097**: Local mode MUST permit individual views of the local machine's repositories without
   suppression and without an identity link, and MUST resolve display names live from the local Git
   repository at render time rather than from the platform database.
@@ -530,8 +551,9 @@ leaks sit inside the signed AIBOM document itself: `CommitEntry.AuthorEmail` and
   sanitization, not redacted at read time.
 - **FR-110**: An imported record carrying a prompt, prompt preview, prompt excerpt or any
   substring of a prompt MUST have that content discarded at the ingestion boundary and MUST NOT be
-  stored, counted as evidence or re-exported. A truncated prompt is prompt content, and FR-020
-  applies to it in full.
+  stored, counted as evidence or re-exported. A truncated prompt is prompt content. Session content
+  exists only as `SpanContent` on an ingested session (ADR-016); an imported prompt fragment has no
+  session and no expiry anchor, so it is discarded.
 - **FR-111**: Import from a plaintext-identity source MUST NOT create a path by which that
   plaintext re-enters an artifact. An artifact generated from imported records MUST carry only
   pseudonymous handles per FR-095, regardless of what the source artifact carried.
@@ -600,7 +622,7 @@ diffs and no pull request, review or check records.
   | Source revisions ingested | 100,000 per day | 500,000 per day steady state; 5,000,000 per day during backfill | Commits, PRs, reviews, review comments and checks at roughly 250 revisions per engineer-week |
   | Source revisions resident | Not stated | 250,000,000 | 500,000 per day at the 730-day evidence retention ceiling, plus historical backfill |
   | Accepted spans | 1,000,000 per day | 20,000,000 per day | 2,000 engineers at 10 instrumented sessions per day at roughly 1,000 spans per session |
-  | Spans resident | Not stated | 600,000,000 | 20,000,000 per day at the 30-day default span retention |
+  | Spans resident | Not stated | 1,200,000,000 | 20,000,000 per day at the 60-day default span retention |
   | Concurrent interactive principals | Not stated | 200 | 10% of engineers plus leadership during a reporting peak |
 
 - **NFR-014**: Interactive latency targets by scope level supersede NFR-001 for the organization
@@ -672,7 +694,7 @@ diffs and no pull request, review or check records.
 | ReportDefinition (changed) | scope_level, scope_ids added | project_ids and repository_ids become derived projections and are not independently writable |
 | Membership (changed) | team_grant_ids, is_external added | Team grant resolves through TeamProject; is_external denials are not relaxable |
 | Workspace (changed) | individual_attribution_enabled, contributor_key_ref added | Flag defaults false, owner-only, audited; key reference never returned by any API |
-| AuditEvent (changed) | subject_contributor_id nullable added | Remains content-free; a contributor handle is pseudonymous and permitted |
+| AuditEvent (changed) | subject_contributor_id nullable, returned_ids (0..n session or finding IDs a read returned) added; resource_id is the requested resource | Remains content-free; a contributor handle is pseudonymous and permitted; session-content and coaching read events are owner/admin-only and never listed to the subject (FR-093) |
 
 ## Success Criteria *(mandatory)*
 
@@ -692,7 +714,10 @@ diffs and no pull request, review or check records.
 - **SC-015**: With `individual_attribution_enabled` false, 100% of named-person requests across
   all four roles are denied. With it true, 100% of permitted named-person requests produce exactly
   one audit event and exactly one subject notification, and a forced audit-write failure produces
-  zero returned results.
+  zero returned results. With the flag in either state, each session-content read request and each
+  request reading another person's coaching produces exactly one owner/admin-only audit event
+  listing the session or finding IDs returned (none for an empty result), zero subject
+  notifications and zero view-of-me entries.
 - **SC-016**: A subject's self view returns the union of their linked and aliased identities with
   zero suppressed values, and returns zero records for any contributor they are not linked to.
 - **SC-017**: External-viewer probes against organization scope, team scope, contributor dimension
@@ -752,7 +777,10 @@ diffs and no pull request, review or check records.
 | FR-016 "aggregate people signals" | Widened to permit pseudonymous contributor handles per ADR-011. Plaintext identity remains prohibited. |
 | NFR-001 overview p95 2 seconds | Retained for repository, team and project. Superseded by NFR-014 for organization only. |
 | NFR-002 50 repositories, 100,000 source records, 1,000,000 spans per workspace per day | Retained as the pilot tier. Superseded by NFR-013 for the enterprise tier. |
-| security.md:53 "No identity filter is available in standard API/report views" | Superseded by FR-091 and FR-092. |
+| security.md:77 "No identity filter is available in standard API/report views" | Superseded by FR-091 and FR-092. |
+| FR-018 content-free audit of session-content reads (ADR-016) | Extended by FR-093. A session-content or coaching read records subject handle and the session or finding IDs returned, is readable by owner and admin only, and is excluded from the subject's FR-094 list. |
+| US4 and FR-020 session content (ADR-016) | Another person's content is governed by FR-087's session row, not by FR-092's named-person conditions or `individual_attribution_enabled`, and never grants a named-person metric view. |
+| security.md authorization matrix "Read session content" row | Refined by FR-087 and FR-096: coaching needs a grant covering every cited project; an internal viewer reads only their own sessions; `is_external` never reads content. |
 | data-model.md entity catalog | Extended by the Key Entities table above. |
 
 ## External System Reconciliation
@@ -806,7 +834,7 @@ Prompture (`/Users/shashanksaxena/Documents/Personal/Code/sovix-ai`) state as in
 ## Assumptions
 
 - The enterprise tier describes an organization of roughly 2,000 engineers in 500 teams across
-  2,000 repositories and 300 projects, with 730-day evidence retention and 30-day span retention.
+  2,000 repositories and 300 projects, with 730-day evidence retention and 60-day span retention.
   A larger tenant requires a measured capacity review, as NFR-002 already states for the pilot.
 - The workspace remains the only tenancy boundary. A customer requiring several isolated
   organizations under one billing relationship is out of scope and is ADR-012's revisit trigger.

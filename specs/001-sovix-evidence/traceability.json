@@ -189,7 +189,7 @@
     },
     {
       "id": "T011",
-      "description": "Implement metadata allowlist and structured content-free error logging",
+      "description": "Implement attribute allowlist (metadata plus ADR-016 session content) and structured content-free error logging",
       "path": "services/platform/src/sovix/domain/privacy.py",
       "requirements": [
         "FR-016",
@@ -696,7 +696,7 @@
     },
     {
       "id": "T037",
-      "description": "Enforce aggregate-first ingestion and strip prompts, emails, arguments and exception text before persistence",
+      "description": "Enforce aggregate-first ingestion: secret-redact session content into its expiring store; strip emails and non-allowlisted fields before persistence",
       "path": "services/platform/src/sovix/adapters/redaction.py",
       "requirements": [
         "FR-016"
@@ -2407,7 +2407,7 @@
     },
     {
       "id": "T125",
-      "description": "Seed canary secrets/content and assert absence across all accepted stores, logs and exports",
+      "description": "Seed canary secrets/content; assert secrets absent everywhere and content absent outside the expiring session-content store",
       "path": "tests/security/test_redaction.py",
       "requirements": [
         "NFR-010"
@@ -2673,7 +2673,13 @@
         "T134",
         "T135",
         "T136",
-        "T137"
+        "T137",
+        "T139",
+        "T140",
+        "T141",
+        "T142",
+        "T143",
+        "T144"
       ],
       "parallel": false,
       "acceptance": [
@@ -2681,6 +2687,125 @@
         "AC-NFR011"
       ],
       "phase": "Release quality"
+    },
+    {
+      "id": "T139",
+      "description": "Write failing fixtures for session-content capture, redaction, content_state, expiry, restore re-application and audited role-scoped reads",
+      "path": "tests/integration/test_session_content.py",
+      "requirements": [
+        "FR-018",
+        "FR-020",
+        "FR-024",
+        "FR-037",
+        "FR-041",
+        "NFR-010"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T042",
+        "T052",
+        "T082"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3",
+        "AC-US4",
+        "AC-US7",
+        "AC-NFR010"
+      ],
+      "phase": "Session content (ADR-016)"
+    },
+    {
+      "id": "T140",
+      "description": "Implement SpanContent store with secret redaction, redaction counts and Session content_state present/partial/missing/expired",
+      "path": "services/platform/src/sovix/domain/session_content.py",
+      "requirements": [
+        "FR-020",
+        "FR-024"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T139"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "Session content (ADR-016)"
+    },
+    {
+      "id": "T141",
+      "description": "Implement hard deletion of session content no later than 30 days after session end or last received span, or the shorter workspace period applied to stored content; reject spans_days not greater than session_content_days; re-apply deletion on restore before serving",
+      "path": "services/platform/src/sovix/workers/content_expiry.py",
+      "requirements": [
+        "FR-037",
+        "FR-041"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T140"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7"
+      ],
+      "phase": "Session content (ADR-016)"
+    },
+    {
+      "id": "T142",
+      "description": "Implement session-content reads and developer-filtered session lists for self, owner, admin and granted analyst; each content read writes one owner/admin-only content-free AuditEvent or fails, and notifies no subject",
+      "path": "services/platform/src/sovix/api/session_content.py",
+      "requirements": [
+        "FR-014",
+        "FR-018"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T141"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US3",
+        "AC-US4"
+      ],
+      "phase": "Session content (ADR-016)"
+    },
+    {
+      "id": "T143",
+      "description": "Implement the one-time content-capture disclosure in collector install output and the workspace settings page",
+      "path": "apps/console/app/settings/workspace/disclosure.tsx",
+      "requirements": [
+        "FR-019"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T142"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US4"
+      ],
+      "phase": "Session content (ADR-016)"
+    },
+    {
+      "id": "T144",
+      "description": "Encrypt session content under per-workspace, per-session-end-day keys held in the secret manager/KMS (OS keychain in local mode) outside every database backup; write open sessions under a provisional key and re-wrap to the end-day key at session end or last received span; destroy keys at expiry or early when retention shortens; encrypt coaching model text and citation quotes under the key of their earliest-expiring cited session; restore still re-applies deletion",
+      "path": "services/platform/src/sovix/domain/content_keys.py",
+      "requirements": [
+        "FR-037",
+        "FR-041",
+        "NFR-010"
+      ],
+      "story": "US4",
+      "depends_on": [
+        "T143"
+      ],
+      "parallel": false,
+      "acceptance": [
+        "AC-US7",
+        "AC-NFR010"
+      ],
+      "phase": "Session content (ADR-016)"
     }
   ],
   "requirements": {
@@ -2730,13 +2855,17 @@
         "T004",
         "T011",
         "T113",
-        "T125"
+        "T125",
+        "T139",
+        "T144"
       ],
       "acceptance": [
         "AC-NFR007",
         "AC-NFR010",
         "AC-US1",
-        "AC-US3"
+        "AC-US3",
+        "AC-US4",
+        "AC-US7"
       ]
     },
     "NFR-009": {
@@ -2987,10 +3116,12 @@
         "T035",
         "T040",
         "T041",
-        "T042"
+        "T042",
+        "T142"
       ],
       "acceptance": [
-        "AC-US3"
+        "AC-US3",
+        "AC-US4"
       ]
     },
     "FR-015": {
@@ -3023,10 +3154,15 @@
         "T039",
         "T040",
         "T041",
-        "T042"
+        "T042",
+        "T139",
+        "T142"
       ],
       "acceptance": [
-        "AC-US3"
+        "AC-NFR010",
+        "AC-US3",
+        "AC-US4",
+        "AC-US7"
       ]
     },
     "FR-019": {
@@ -3035,7 +3171,8 @@
         "T044",
         "T050",
         "T051",
-        "T052"
+        "T052",
+        "T143"
       ],
       "acceptance": [
         "AC-US4"
@@ -3047,10 +3184,15 @@
         "T045",
         "T050",
         "T051",
-        "T052"
+        "T052",
+        "T139",
+        "T140"
       ],
       "acceptance": [
-        "AC-US4"
+        "AC-NFR010",
+        "AC-US3",
+        "AC-US4",
+        "AC-US7"
       ]
     },
     "FR-021": {
@@ -3095,10 +3237,15 @@
         "T049",
         "T050",
         "T051",
-        "T052"
+        "T052",
+        "T139",
+        "T140"
       ],
       "acceptance": [
-        "AC-US4"
+        "AC-NFR010",
+        "AC-US3",
+        "AC-US4",
+        "AC-US7"
       ]
     },
     "FR-025": {
@@ -3251,9 +3398,15 @@
         "T074",
         "T080",
         "T081",
-        "T082"
+        "T082",
+        "T139",
+        "T141",
+        "T144"
       ],
       "acceptance": [
+        "AC-NFR010",
+        "AC-US3",
+        "AC-US4",
         "AC-US7"
       ]
     },
@@ -3288,10 +3441,16 @@
         "T080",
         "T081",
         "T082",
-        "T114"
+        "T114",
+        "T139",
+        "T141",
+        "T144"
       ],
       "acceptance": [
         "AC-NFR004",
+        "AC-NFR010",
+        "AC-US3",
+        "AC-US4",
         "AC-US7"
       ]
     },
